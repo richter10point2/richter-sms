@@ -1,0 +1,1423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Richter SMS</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --surface: #111111;
+    --surface2: #1a1a1a;
+    --surface3: #222222;
+    --border: #2a2a2a;
+    --border2: #333333;
+    --text: #f0f0f0;
+    --text2: #888888;
+    --text3: #555555;
+    --accent: #e8ff00;
+    --accent2: #b8cc00;
+    --red: #ff4444;
+    --green: #00cc88;
+    --orange: #ff8c00;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Mono', monospace;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* HEADER */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 32px;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    z-index: 100;
+  }
+
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 18px;
+    letter-spacing: -0.5px;
+    color: var(--text);
+  }
+
+  .logo span {
+    color: var(--accent);
+  }
+
+  .header-status {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    font-size: 11px;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--text3);
+    display: inline-block;
+    margin-right: 6px;
+  }
+
+  .status-dot.live { background: var(--green); box-shadow: 0 0 8px var(--green); }
+  .status-dot.warn { background: var(--orange); }
+  .status-dot.err { background: var(--red); }
+
+  /* NAV */
+  .nav {
+    display: flex;
+    gap: 2px;
+    padding: 16px 32px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .nav-btn {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    padding: 8px 16px;
+    border: 1px solid transparent;
+    background: none;
+    color: var(--text3);
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.15s;
+  }
+
+  .nav-btn:hover { color: var(--text2); border-color: var(--border2); }
+  .nav-btn.active {
+    color: var(--accent);
+    border-color: var(--accent);
+    background: rgba(232, 255, 0, 0.05);
+  }
+
+  /* MAIN */
+  .main {
+    padding: 32px;
+    max-width: 1200px;
+  }
+
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* SECTION HEADER */
+  .section-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 24px;
+  }
+
+  .section-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 22px;
+    letter-spacing: -0.5px;
+  }
+
+  .section-sub {
+    font-size: 11px;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 4px;
+  }
+
+  /* STATS BAR */
+  .stats-bar {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    margin-bottom: 24px;
+    overflow: hidden;
+  }
+
+  .stat {
+    background: var(--surface);
+    padding: 20px 24px;
+  }
+
+  .stat-val {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 28px;
+    color: var(--text);
+    line-height: 1;
+  }
+
+  .stat-val.accent { color: var(--accent); }
+  .stat-val.red { color: var(--red); }
+  .stat-val.green { color: var(--green); }
+
+  .stat-label {
+    font-size: 10px;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-top: 6px;
+  }
+
+  /* BUTTONS */
+  .btn {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    padding: 10px 20px;
+    border: 1px solid var(--border2);
+    background: var(--surface2);
+    color: var(--text2);
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+
+  .btn:hover { color: var(--text); border-color: var(--text3); }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #000;
+    border-color: var(--accent);
+    font-weight: 500;
+  }
+
+  .btn-primary:hover { background: var(--accent2); border-color: var(--accent2); color: #000; }
+  .btn-primary:disabled { background: var(--surface3); color: var(--text3); border-color: var(--border); cursor: not-allowed; }
+
+  .btn-danger { border-color: var(--red); color: var(--red); }
+  .btn-danger:hover { background: rgba(255,68,68,0.1); }
+
+  .btn-sm { padding: 6px 12px; font-size: 10px; }
+
+  /* UPLOAD ZONE */
+  .upload-zone {
+    border: 1px dashed var(--border2);
+    border-radius: 4px;
+    padding: 48px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--surface);
+    margin-bottom: 24px;
+  }
+
+  .upload-zone:hover, .upload-zone.drag { border-color: var(--accent); background: rgba(232,255,0,0.03); }
+
+  .upload-icon {
+    font-size: 32px;
+    margin-bottom: 12px;
+    opacity: 0.4;
+  }
+
+  .upload-label {
+    font-family: 'Syne', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text2);
+    margin-bottom: 6px;
+  }
+
+  .upload-sub {
+    font-size: 11px;
+    color: var(--text3);
+  }
+
+  /* TABLE */
+  .table-wrap {
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .table-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    gap: 12px;
+  }
+
+  .search-input {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    color: var(--text);
+    padding: 8px 12px;
+    border-radius: 2px;
+    width: 240px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  .search-input:focus { border-color: var(--accent); }
+  .search-input::placeholder { color: var(--text3); }
+
+  .table-scroll { overflow-x: auto; max-height: 480px; overflow-y: auto; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+
+  thead { position: sticky; top: 0; z-index: 10; }
+
+  th {
+    background: var(--surface2);
+    color: var(--text3);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    padding: 10px 16px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+
+  td {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text2);
+    white-space: nowrap;
+  }
+
+  tr:last-child td { border-bottom: none; }
+
+  tr:hover td { background: var(--surface2); color: var(--text); }
+
+  .badge {
+    display: inline-block;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 2px 8px;
+    border-radius: 2px;
+    font-weight: 500;
+  }
+
+  .badge-active { background: rgba(0,204,136,0.15); color: var(--green); border: 1px solid rgba(0,204,136,0.3); }
+  .badge-optout { background: rgba(255,68,68,0.1); color: var(--red); border: 1px solid rgba(255,68,68,0.2); }
+
+  /* COMPOSE */
+  .compose-grid {
+    display: grid;
+    grid-template-columns: 1fr 360px;
+    gap: 24px;
+    align-items: start;
+  }
+
+  .compose-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 24px;
+  }
+
+  .compose-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--text3);
+    margin-bottom: 8px;
+    display: block;
+  }
+
+  .compose-textarea {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    color: var(--text);
+    padding: 16px;
+    border-radius: 2px;
+    width: 100%;
+    height: 160px;
+    resize: vertical;
+    outline: none;
+    line-height: 1.6;
+    transition: border-color 0.15s;
+  }
+
+  .compose-textarea:focus { border-color: var(--accent); }
+
+  .char-count {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    color: var(--text3);
+    margin-top: 8px;
+  }
+
+  .char-count.warn { color: var(--orange); }
+  .char-count.over { color: var(--red); }
+
+  .compose-meta {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .meta-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11px;
+  }
+
+  .meta-key { color: var(--text3); text-transform: uppercase; letter-spacing: 1px; }
+  .meta-val { color: var(--text2); font-weight: 500; }
+  .meta-val.accent { color: var(--accent); }
+
+  /* PHONE PREVIEW */
+  .phone-preview {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 24px;
+  }
+
+  .phone-frame {
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 16px;
+    padding: 20px 16px;
+    min-height: 200px;
+  }
+
+  .phone-carrier {
+    font-size: 10px;
+    color: var(--text3);
+    text-align: center;
+    margin-bottom: 16px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .phone-bubble-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .phone-sender {
+    font-size: 10px;
+    color: var(--text3);
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .phone-bubble {
+    background: var(--surface3);
+    border-radius: 2px 12px 12px 12px;
+    padding: 10px 14px;
+    font-size: 12px;
+    color: var(--text);
+    line-height: 1.5;
+    max-width: 90%;
+    word-break: break-word;
+    white-space: pre-wrap;
+  }
+
+  /* SEGMENT SELECT */
+  .segment-select {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    color: var(--text);
+    padding: 8px 12px;
+    border-radius: 2px;
+    outline: none;
+    width: 100%;
+    cursor: pointer;
+  }
+
+  .segment-select:focus { border-color: var(--accent); }
+
+  /* CONFIRM MODAL */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 4px;
+    padding: 32px;
+    max-width: 480px;
+    width: 90%;
+  }
+
+  .modal-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 18px;
+    margin-bottom: 8px;
+  }
+
+  .modal-sub {
+    font-size: 12px;
+    color: var(--text3);
+    margin-bottom: 24px;
+    line-height: 1.6;
+  }
+
+  .modal-preview {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 16px;
+    font-size: 12px;
+    color: var(--text2);
+    line-height: 1.6;
+    margin-bottom: 24px;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .modal-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+  }
+
+  /* HISTORY */
+  .history-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 20px 24px;
+    margin-bottom: 8px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 16px;
+    align-items: center;
+  }
+
+  .history-msg {
+    font-size: 13px;
+    color: var(--text);
+    margin-bottom: 8px;
+    line-height: 1.5;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 600px;
+  }
+
+  .history-meta {
+    font-size: 10px;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .history-stats {
+    display: flex;
+    gap: 16px;
+    text-align: right;
+  }
+
+  .history-stat-val {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 18px;
+  }
+
+  .history-stat-label {
+    font-size: 9px;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  /* LOADING */
+  .loading {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    color: var(--text3);
+    padding: 32px;
+    justify-content: center;
+  }
+
+  .spinner {
+    width: 14px;
+    height: 14px;
+    border: 2px solid var(--border2);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* TOAST */
+  .toast-wrap {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .toast {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    padding: 12px 20px;
+    border-radius: 2px;
+    border-left: 3px solid var(--accent);
+    background: var(--surface2);
+    color: var(--text);
+    animation: slideIn 0.2s ease;
+    max-width: 320px;
+  }
+
+  .toast.error { border-left-color: var(--red); }
+  .toast.success { border-left-color: var(--green); }
+
+  @keyframes slideIn { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+  /* EMPTY STATE */
+  .empty {
+    padding: 48px;
+    text-align: center;
+    color: var(--text3);
+    font-size: 12px;
+  }
+
+  .empty-icon { font-size: 28px; margin-bottom: 12px; opacity: 0.3; }
+  .empty-label { text-transform: uppercase; letter-spacing: 1.5px; }
+
+  /* PROGRESS BAR */
+  .progress-wrap {
+    display: none;
+    margin-top: 16px;
+  }
+
+  .progress-wrap.show { display: block; }
+
+  .progress-bar-bg {
+    background: var(--surface3);
+    border-radius: 2px;
+    height: 4px;
+    overflow: hidden;
+  }
+
+  .progress-bar-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.3s ease;
+    width: 0%;
+  }
+
+  .progress-label {
+    font-size: 10px;
+    color: var(--text3);
+    margin-top: 6px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  /* FILTER PILLS */
+  .filter-pills {
+    display: flex;
+    gap: 6px;
+  }
+
+  .pill {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 4px 10px;
+    border: 1px solid var(--border2);
+    border-radius: 20px;
+    cursor: pointer;
+    color: var(--text3);
+    transition: all 0.15s;
+    background: none;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .pill:hover { color: var(--text2); }
+  .pill.active { border-color: var(--accent); color: var(--accent); background: rgba(232,255,0,0.05); }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: var(--surface); }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text3); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="logo">Richter <span>SMS</span></div>
+  </div>
+  <div class="header-status">
+    <div id="sheets-status"><span class="status-dot"></span>Sheets</div>
+    <div id="telnyx-status"><span class="status-dot"></span>Telnyx</div>
+  </div>
+</div>
+
+<div class="nav">
+  <button class="nav-btn active" onclick="switchPanel('contacts')">Contacts</button>
+  <button class="nav-btn" onclick="switchPanel('compose')">Compose & Send</button>
+  <button class="nav-btn" onclick="switchPanel('history')">Send History</button>
+</div>
+
+<div class="main">
+
+  <!-- CONTACTS PANEL -->
+  <div class="panel active" id="panel-contacts">
+    <div class="section-head">
+      <div>
+        <div class="section-title">Contacts</div>
+        <div class="section-sub">Manage your SMS list</div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn" onclick="document.getElementById('csv-input').click()">Upload CSV</button>
+        <button class="btn btn-primary" onclick="loadContacts()">Refresh</button>
+      </div>
+    </div>
+
+    <input type="file" id="csv-input" accept=".csv" style="display:none" onchange="handleCSVUpload(event)">
+
+    <div class="upload-zone" id="upload-zone"
+      onclick="document.getElementById('csv-input').click()"
+      ondragover="event.preventDefault();this.classList.add('drag')"
+      ondragleave="this.classList.remove('drag')"
+      ondrop="handleDrop(event)">
+      <div class="upload-icon">📋</div>
+      <div class="upload-label">Drop your Copper CSV export here</div>
+      <div class="upload-sub">or click to browse — first_name, last_name, company, phone, email columns expected</div>
+    </div>
+
+    <div class="stats-bar">
+      <div class="stat">
+        <div class="stat-val accent" id="stat-total">—</div>
+        <div class="stat-label">Total Contacts</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val green" id="stat-active">—</div>
+        <div class="stat-label">Active</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val red" id="stat-optout">—</div>
+        <div class="stat-label">Opted Out</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val" id="stat-sends">—</div>
+        <div class="stat-label">Total Sends</div>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <div class="table-toolbar">
+        <input class="search-input" type="text" placeholder="Search name, company, phone..." oninput="filterContacts(this.value)">
+        <div class="filter-pills">
+          <button class="pill active" onclick="setFilter('all', this)">All</button>
+          <button class="pill" onclick="setFilter('active', this)">Active</button>
+          <button class="pill" onclick="setFilter('optout', this)">Opted Out</button>
+        </div>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Company</th>
+              <th>Phone</th>
+              <th>Email</th>
+              <th>Status</th>
+              <th>Added</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="contacts-tbody">
+            <tr><td colspan="7"><div class="loading"><div class="spinner"></div>Loading contacts...</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- COMPOSE PANEL -->
+  <div class="panel" id="panel-compose">
+    <div class="section-head">
+      <div>
+        <div class="section-title">Compose & Send</div>
+        <div class="section-sub">Write your message and select recipients</div>
+      </div>
+    </div>
+
+    <div class="compose-grid">
+      <div>
+        <div class="compose-card">
+          <label class="compose-label">Recipient Segment</label>
+          <select class="segment-select" id="segment-select" onchange="updateRecipientCount()">
+            <option value="all">All Active Contacts</option>
+          </select>
+
+          <div style="margin-top:20px;">
+            <label class="compose-label">Message</label>
+            <textarea class="compose-textarea" id="message-input" placeholder="Hi [First Name], Spencer from Richter here..." oninput="updateCompose()"></textarea>
+            <div class="char-count" id="char-count">
+              <span id="char-num">0 / 160</span>
+              <span id="segment-count">1 segment</span>
+            </div>
+          </div>
+
+          <div class="compose-meta">
+            <div class="meta-row">
+              <span class="meta-key">Recipients</span>
+              <span class="meta-val accent" id="recipient-count">—</span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-key">Est. Cost</span>
+              <span class="meta-val" id="est-cost">—</span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-key">From Number</span>
+              <span class="meta-val" id="from-number-display">Not configured</span>
+            </div>
+          </div>
+
+          <div class="progress-wrap" id="progress-wrap">
+            <div class="progress-bar-bg">
+              <div class="progress-bar-fill" id="progress-fill"></div>
+            </div>
+            <div class="progress-label" id="progress-label">Sending...</div>
+          </div>
+
+          <div style="margin-top:20px;display:flex;gap:8px;">
+            <button class="btn btn-primary" id="send-btn" onclick="confirmSend()" style="flex:1" disabled>Send Message</button>
+          </div>
+
+          <div style="margin-top:12px;font-size:10px;color:var(--text3);line-height:1.6;">
+            STOP opt-out language will be appended automatically if not included in your message.
+          </div>
+        </div>
+      </div>
+
+      <div class="phone-preview">
+        <label class="compose-label" style="text-align:center;display:block;">Preview</label>
+        <div class="phone-frame">
+          <div class="phone-carrier">SMS Message</div>
+          <div class="phone-bubble-wrap">
+            <div class="phone-sender">Richter</div>
+            <div class="phone-bubble" id="preview-bubble">Your message will appear here...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HISTORY PANEL -->
+  <div class="panel" id="panel-history">
+    <div class="section-head">
+      <div>
+        <div class="section-title">Send History</div>
+        <div class="section-sub">All outbound campaigns</div>
+      </div>
+      <button class="btn btn-primary" onclick="loadHistory()">Refresh</button>
+    </div>
+    <div id="history-list">
+      <div class="loading"><div class="spinner"></div>Loading history...</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- CONFIRM MODAL -->
+<div class="modal-overlay" id="confirm-modal">
+  <div class="modal">
+    <div class="modal-title">Confirm Send</div>
+    <div class="modal-sub" id="modal-sub">This will send to <strong id="modal-count">0</strong> active contacts. This cannot be undone.</div>
+    <div class="modal-preview" id="modal-preview"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="executeSend()">Send Now</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<script src="config.js"></script>
+<script>
+// ─── STATE ────────────────────────────────────────────────────────────────────
+let allContacts = [];
+let filteredContacts = [];
+let activeFilter = 'all';
+let searchQuery = '';
+let sendHistory = [];
+let sheetsToken = null;
+let tokenExpiry = 0;
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', async () => {
+  updateFromNumberDisplay();
+  await getGoogleToken();
+  await loadContacts();
+  await loadHistory();
+  updateCompose();
+});
+
+// ─── NAVIGATION ───────────────────────────────────────────────────────────────
+function switchPanel(name) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  event.target.classList.add('active');
+  if (name === 'compose') updateRecipientCount();
+  if (name === 'history') loadHistory();
+}
+
+// ─── GOOGLE SHEETS AUTH ───────────────────────────────────────────────────────
+async function getGoogleToken() {
+  if (sheetsToken && Date.now() < tokenExpiry) return sheetsToken;
+
+  try {
+    const now = Math.floor(Date.now() / 1000);
+    const header = btoa(JSON.stringify({ alg: 'RS256', typ: 'JWT' })).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+    const payload = btoa(JSON.stringify({
+      iss: CONFIG.SERVICE_ACCOUNT_EMAIL,
+      scope: 'https://www.googleapis.com/auth/spreadsheets',
+      aud: 'https://oauth2.googleapis.com/token',
+      exp: now + 3600,
+      iat: now
+    })).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+
+    const signingInput = `${header}.${payload}`;
+    const key = await importPrivateKey(CONFIG.PRIVATE_KEY);
+    const signature = await signJWT(signingInput, key);
+    const jwt = `${signingInput}.${signature}`;
+
+    const res = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=${jwt}`
+    });
+
+    const data = await res.json();
+    sheetsToken = data.access_token;
+    tokenExpiry = Date.now() + 3500 * 1000;
+    setStatus('sheets-status', 'live', 'Sheets');
+    return sheetsToken;
+  } catch (e) {
+    setStatus('sheets-status', 'err', 'Sheets');
+    toast('Google Sheets auth failed — check your private key in config.js', 'error');
+    return null;
+  }
+}
+
+async function importPrivateKey(pem) {
+  const pemContents = pem.replace(/-----BEGIN RSA PRIVATE KEY-----/, '')
+    .replace(/-----END RSA PRIVATE KEY-----/, '')
+    .replace(/-----BEGIN PRIVATE KEY-----/, '')
+    .replace(/-----END PRIVATE KEY-----/, '')
+    .replace(/\s/g, '');
+  const binaryDer = Uint8Array.from(atob(pemContents), c => c.charCodeAt(0));
+  return await crypto.subtle.importKey('pkcs8', binaryDer.buffer,
+    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['sign']);
+}
+
+async function signJWT(input, key) {
+  const enc = new TextEncoder();
+  const sig = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', key, enc.encode(input));
+  return btoa(String.fromCharCode(...new Uint8Array(sig))).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+}
+
+// ─── SHEETS API ───────────────────────────────────────────────────────────────
+async function sheetsGet(range) {
+  const token = await getGoogleToken();
+  if (!token) return null;
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SHEET_ID}/values/${encodeURIComponent(range)}`;
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  return res.json();
+}
+
+async function sheetsAppend(range, values) {
+  const token = await getGoogleToken();
+  if (!token) return null;
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SHEET_ID}/values/${encodeURIComponent(range)}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ values })
+  });
+  return res.json();
+}
+
+async function sheetsUpdate(range, values) {
+  const token = await getGoogleToken();
+  if (!token) return null;
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SHEET_ID}/values/${encodeURIComponent(range)}?valueInputOption=RAW`;
+  const res = await fetch(url, {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ values })
+  });
+  return res.json();
+}
+
+// ─── CONTACTS ─────────────────────────────────────────────────────────────────
+async function loadContacts() {
+  const tbody = document.getElementById('contacts-tbody');
+  tbody.innerHTML = '<tr><td colspan="7"><div class="loading"><div class="spinner"></div>Loading...</div></td></tr>';
+
+  try {
+    // Load optouts first
+    const optoutData = await sheetsGet('optouts!A:B');
+    const optoutNumbers = new Set();
+    if (optoutData && optoutData.values) {
+      optoutData.values.slice(1).forEach(row => {
+        if (row[0]) optoutNumbers.add(normalizePhone(row[0]));
+      });
+    }
+
+    const data = await sheetsGet('contacts!A:H');
+    if (!data || !data.values || data.values.length < 2) {
+      tbody.innerHTML = '<tr><td colspan="7"><div class="empty"><div class="empty-icon">📭</div><div class="empty-label">No contacts yet — upload a CSV to get started</div></div></td></tr>';
+      updateStats(0, 0, 0);
+      return;
+    }
+
+    allContacts = data.values.slice(1).map((row, i) => ({
+      rowIndex: i + 2,
+      id: row[0] || '',
+      firstName: row[1] || '',
+      lastName: row[2] || '',
+      company: row[3] || '',
+      phone: row[4] || '',
+      email: row[5] || '',
+      status: optoutNumbers.has(normalizePhone(row[4])) ? 'optout' : (row[6] || 'active'),
+      dateAdded: row[7] || ''
+    })).filter(c => c.phone || c.email);
+
+    renderContacts();
+    updateStats(
+      allContacts.length,
+      allContacts.filter(c => c.status === 'active').length,
+      allContacts.filter(c => c.status === 'optout').length
+    );
+    updateSegmentOptions();
+  } catch (e) {
+    tbody.innerHTML = '<tr><td colspan="7"><div class="empty"><div class="empty-label">Error loading contacts</div></div></td></tr>';
+    toast('Error loading contacts: ' + e.message, 'error');
+  }
+}
+
+function renderContacts() {
+  let contacts = allContacts;
+
+  if (activeFilter === 'active') contacts = contacts.filter(c => c.status === 'active');
+  if (activeFilter === 'optout') contacts = contacts.filter(c => c.status === 'optout');
+
+  if (searchQuery) {
+    const q = searchQuery.toLowerCase();
+    contacts = contacts.filter(c =>
+      (c.firstName + ' ' + c.lastName).toLowerCase().includes(q) ||
+      c.company.toLowerCase().includes(q) ||
+      c.phone.includes(q) ||
+      c.email.toLowerCase().includes(q)
+    );
+  }
+
+  filteredContacts = contacts;
+  const tbody = document.getElementById('contacts-tbody');
+
+  if (contacts.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7"><div class="empty"><div class="empty-icon">🔍</div><div class="empty-label">No contacts match this filter</div></div></td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = contacts.map(c => `
+    <tr>
+      <td style="color:var(--text)">${c.firstName} ${c.lastName}</td>
+      <td>${c.company}</td>
+      <td>${formatPhone(c.phone)}</td>
+      <td>${c.email}</td>
+      <td><span class="badge badge-${c.status === 'optout' ? 'optout' : 'active'}">${c.status === 'optout' ? 'Opted Out' : 'Active'}</span></td>
+      <td>${c.dateAdded ? c.dateAdded.split('T')[0] : '—'}</td>
+      <td>${c.status === 'active' ? `<button class="btn btn-sm btn-danger" onclick="manualOptOut('${c.phone}')">Opt Out</button>` : ''}</td>
+    </tr>
+  `).join('');
+}
+
+function filterContacts(q) {
+  searchQuery = q;
+  renderContacts();
+}
+
+function setFilter(filter, btn) {
+  activeFilter = filter;
+  document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  renderContacts();
+}
+
+function updateStats(total, active, optout) {
+  document.getElementById('stat-total').textContent = total.toLocaleString();
+  document.getElementById('stat-active').textContent = active.toLocaleString();
+  document.getElementById('stat-optout').textContent = optout.toLocaleString();
+}
+
+function updateSegmentOptions() {
+  const sel = document.getElementById('segment-select');
+  sel.innerHTML = `<option value="all">All Active Contacts (${allContacts.filter(c=>c.status==='active').length})</option>`;
+  updateRecipientCount();
+}
+
+// ─── CSV UPLOAD ───────────────────────────────────────────────────────────────
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('upload-zone').classList.remove('drag');
+  const file = e.dataTransfer.files[0];
+  if (file && file.name.endsWith('.csv')) processCSV(file);
+  else toast('Please drop a CSV file', 'error');
+}
+
+function handleCSVUpload(e) {
+  const file = e.target.files[0];
+  if (file) processCSV(file);
+}
+
+function processCSV(file) {
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    const text = e.target.result;
+    const rows = parseCSV(text);
+    if (rows.length < 2) { toast('CSV appears empty', 'error'); return; }
+
+    const headers = rows[0].map(h => h.toLowerCase().trim());
+    const findCol = (names) => names.reduce((found, n) => found !== -1 ? found : headers.findIndex(h => h.includes(n)), -1);
+
+    const cols = {
+      firstName: findCol(['first_name', 'firstname', 'first name']),
+      lastName: findCol(['last_name', 'lastname', 'last name']),
+      company: findCol(['company', 'organization', 'account']),
+      phone: findCol(['phone', 'mobile', 'cell']),
+      email: findCol(['email', 'e-mail'])
+    };
+
+    if (cols.phone === -1) { toast('No phone column found in CSV', 'error'); return; }
+
+    const now = new Date().toISOString();
+    const newRows = rows.slice(1)
+      .filter(row => row[cols.phone] && row[cols.phone].trim())
+      .map((row, i) => [
+        `c_${Date.now()}_${i}`,
+        cols.firstName !== -1 ? row[cols.firstName] || '' : '',
+        cols.lastName !== -1 ? row[cols.lastName] || '' : '',
+        cols.company !== -1 ? row[cols.company] || '' : '',
+        normalizePhone(row[cols.phone]),
+        cols.email !== -1 ? row[cols.email] || '' : '',
+        'active',
+        now
+      ]);
+
+    if (newRows.length === 0) { toast('No valid phone numbers found', 'error'); return; }
+
+    toast(`Uploading ${newRows.length} contacts...`);
+    await sheetsAppend('contacts!A:H', newRows);
+    toast(`${newRows.length} contacts added successfully`, 'success');
+    await loadContacts();
+  };
+  reader.readAsText(file);
+}
+
+function parseCSV(text) {
+  const rows = [];
+  const lines = text.split('\n');
+  for (let line of lines) {
+    if (!line.trim()) continue;
+    const row = [];
+    let inQuotes = false, cell = '';
+    for (let i = 0; i < line.length; i++) {
+      if (line[i] === '"') inQuotes = !inQuotes;
+      else if (line[i] === ',' && !inQuotes) { row.push(cell.trim()); cell = ''; }
+      else cell += line[i];
+    }
+    row.push(cell.trim());
+    rows.push(row);
+  }
+  return rows;
+}
+
+// ─── OPT OUT ──────────────────────────────────────────────────────────────────
+async function manualOptOut(phone) {
+  if (!confirm(`Opt out ${phone}?`)) return;
+  const normalized = normalizePhone(phone);
+  await sheetsAppend('optouts!A:B', [[normalized, new Date().toISOString()]]);
+  toast('Contact opted out', 'success');
+  await loadContacts();
+}
+
+// ─── COMPOSE ──────────────────────────────────────────────────────────────────
+function updateCompose() {
+  const msg = document.getElementById('message-input').value;
+  const len = msg.length;
+  const segs = Math.ceil(len / 160) || 1;
+  const countEl = document.getElementById('char-count');
+  const charNum = document.getElementById('char-num');
+  const segCount = document.getElementById('segment-count');
+
+  charNum.textContent = `${len} / ${segs * 160}`;
+  segCount.textContent = `${segs} segment${segs > 1 ? 's' : ''}`;
+  countEl.className = 'char-count' + (len > 320 ? ' over' : len > 140 ? ' warn' : '');
+
+  const preview = document.getElementById('preview-bubble');
+  const fullMsg = ensureStopLanguage(msg);
+  preview.textContent = fullMsg || 'Your message will appear here...';
+
+  updateRecipientCount();
+}
+
+function updateRecipientCount() {
+  const active = allContacts.filter(c => c.status === 'active' && c.phone);
+  const count = active.length;
+  document.getElementById('recipient-count').textContent = count.toLocaleString();
+  document.getElementById('est-cost').textContent = count > 0 ? `~$${(count * 0.005).toFixed(2)}` : '—';
+
+  const msg = document.getElementById('message-input').value.trim();
+  const sendBtn = document.getElementById('send-btn');
+  sendBtn.disabled = !msg || count === 0 || !CONFIG.TELNYX_API_KEY || CONFIG.TELNYX_API_KEY === 'YOUR_TELNYX_API_KEY';
+}
+
+function updateFromNumberDisplay() {
+  const num = CONFIG.TELNYX_FROM_NUMBER;
+  const el = document.getElementById('from-number-display');
+  if (!num || num === '+1XXXXXXXXXX') {
+    el.textContent = 'Not configured';
+    el.style.color = 'var(--red)';
+    setStatus('telnyx-status', 'err', 'Telnyx');
+  } else {
+    el.textContent = formatPhone(num);
+    el.style.color = 'var(--green)';
+    setStatus('telnyx-status', 'live', 'Telnyx');
+  }
+}
+
+function ensureStopLanguage(msg) {
+  if (!msg) return msg;
+  const lower = msg.toLowerCase();
+  if (lower.includes('stop')) return msg;
+  return msg + ' Reply STOP to opt out.';
+}
+
+// ─── SEND ─────────────────────────────────────────────────────────────────────
+function confirmSend() {
+  const msg = document.getElementById('message-input').value.trim();
+  if (!msg) { toast('Write a message first', 'error'); return; }
+
+  const recipients = allContacts.filter(c => c.status === 'active' && c.phone);
+  if (recipients.length === 0) { toast('No active contacts with phone numbers', 'error'); return; }
+
+  document.getElementById('modal-count').textContent = recipients.length.toLocaleString();
+  document.getElementById('modal-preview').textContent = ensureStopLanguage(msg);
+  document.getElementById('confirm-modal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('confirm-modal').classList.remove('open');
+}
+
+async function executeSend() {
+  closeModal();
+  const msg = ensureStopLanguage(document.getElementById('message-input').value.trim());
+  const recipients = allContacts.filter(c => c.status === 'active' && c.phone);
+
+  const progressWrap = document.getElementById('progress-wrap');
+  const progressFill = document.getElementById('progress-fill');
+  const progressLabel = document.getElementById('progress-label');
+  const sendBtn = document.getElementById('send-btn');
+
+  progressWrap.classList.add('show');
+  sendBtn.disabled = true;
+
+  let sent = 0, failed = 0;
+
+  for (let i = 0; i < recipients.length; i++) {
+    const contact = recipients[i];
+    const pct = Math.round(((i + 1) / recipients.length) * 100);
+    progressFill.style.width = pct + '%';
+    progressLabel.textContent = `Sending ${i + 1} of ${recipients.length}...`;
+
+    try {
+      const res = await fetch('https://api.telnyx.com/v2/messages', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${CONFIG.TELNYX_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          from: CONFIG.TELNYX_FROM_NUMBER,
+          to: contact.phone,
+          text: msg
+        })
+      });
+
+      if (res.ok) sent++;
+      else failed++;
+    } catch (e) {
+      failed++;
+    }
+
+    // Rate limit: 10 messages per second max
+    if (i % 10 === 9) await sleep(1000);
+  }
+
+  // Log to send history
+  await sheetsAppend('send_history!A:E', [[
+    new Date().toISOString(),
+    msg,
+    recipients.length,
+    sent,
+    failed
+  ]]);
+
+  progressWrap.classList.remove('show');
+  progressFill.style.width = '0%';
+  sendBtn.disabled = false;
+
+  toast(`Done — ${sent} sent, ${failed} failed`, sent > 0 ? 'success' : 'error');
+  document.getElementById('message-input').value = '';
+  updateCompose();
+  await loadHistory();
+}
+
+// ─── HISTORY ──────────────────────────────────────────────────────────────────
+async function loadHistory() {
+  const el = document.getElementById('history-list');
+  el.innerHTML = '<div class="loading"><div class="spinner"></div>Loading...</div>';
+
+  try {
+    const data = await sheetsGet('send_history!A:E');
+    if (!data || !data.values || data.values.length < 2) {
+      el.innerHTML = '<div class="empty"><div class="empty-icon">📊</div><div class="empty-label">No sends yet</div></div>';
+      document.getElementById('stat-sends').textContent = '0';
+      return;
+    }
+
+    const rows = data.values.slice(1).reverse();
+    document.getElementById('stat-sends').textContent = rows.length.toLocaleString();
+
+    el.innerHTML = rows.map(row => `
+      <div class="history-card">
+        <div>
+          <div class="history-msg">${escHtml(row[1] || '')}</div>
+          <div class="history-meta">${formatDate(row[0])}</div>
+        </div>
+        <div class="history-stats">
+          <div>
+            <div class="history-stat-val" style="color:var(--text)">${parseInt(row[2]||0).toLocaleString()}</div>
+            <div class="history-stat-label">Sent To</div>
+          </div>
+          <div>
+            <div class="history-stat-val" style="color:var(--green)">${parseInt(row[3]||0).toLocaleString()}</div>
+            <div class="history-stat-label">Delivered</div>
+          </div>
+          <div>
+            <div class="history-stat-val" style="color:var(--red)">${parseInt(row[4]||0).toLocaleString()}</div>
+            <div class="history-stat-label">Failed</div>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  } catch (e) {
+    el.innerHTML = '<div class="empty"><div class="empty-label">Error loading history</div></div>';
+  }
+}
+
+// ─── UTILS ───────────────────────────────────────────────────────────────────
+function normalizePhone(phone) {
+  if (!phone) return '';
+  const digits = phone.replace(/\D/g, '');
+  if (digits.length === 10) return `+1${digits}`;
+  if (digits.length === 11 && digits.startsWith('1')) return `+${digits}`;
+  return `+${digits}`;
+}
+
+function formatPhone(phone) {
+  const digits = (phone || '').replace(/\D/g, '');
+  if (digits.length === 11 && digits.startsWith('1')) {
+    return `(${digits.slice(1,4)}) ${digits.slice(4,7)}-${digits.slice(7)}`;
+  }
+  if (digits.length === 10) {
+    return `(${digits.slice(0,3)}) ${digits.slice(3,6)}-${digits.slice(6)}`;
+  }
+  return phone;
+}
+
+function formatDate(iso) {
+  if (!iso) return '—';
+  try {
+    return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  } catch { return iso; }
+}
+
+function escHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function setStatus(id, state, label) {
+  const el = document.getElementById(id);
+  el.innerHTML = `<span class="status-dot ${state}"></span>${label}`;
+}
+
+function toast(msg, type = '') {
+  const wrap = document.getElementById('toast-wrap');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.textContent = msg;
+  wrap.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
+</script>
+</body>
+</html>
