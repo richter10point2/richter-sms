@@ -4,8 +4,86 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Richter SMS</title>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
+  /* LOGIN SCREEN */
+  .login-screen {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: #0a0a0a;
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+  }
+  .login-screen.show { display: flex; }
+  .login-card {
+    background: #111111;
+    border: 1px solid #333333;
+    border-radius: 4px;
+    padding: 48px;
+    width: 360px;
+    text-align: center;
+  }
+  .login-logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 28px;
+    letter-spacing: -1px;
+    color: #f0f0f0;
+    margin-bottom: 4px;
+  }
+  .login-logo span { color: #e8ff00; }
+  .login-sub {
+    font-size: 11px;
+    color: #555555;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 32px;
+  }
+  .login-instruction {
+    font-size: 12px;
+    color: #555555;
+    margin-bottom: 24px;
+    line-height: 1.6;
+  }
+  .login-error {
+    font-size: 11px;
+    color: #ff4444;
+    margin-top: 16px;
+    display: none;
+  }
+  .login-error.show { display: block; }
+  .g-signin-wrap { display: flex; justify-content: center; }
+  .user-chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: #555555;
+    font-family: 'DM Mono', monospace;
+  }
+  .user-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 1px solid #333333;
+  }
+  .sign-out-btn {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    background: none;
+    border: none;
+    color: #555555;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    text-decoration: underline;
+  }
+  .sign-out-btn:hover { color: #888888; }
+
   :root {
     --bg: #0a0a0a;
     --surface: #111111;
@@ -690,11 +768,25 @@
 </head>
 <body>
 
+<!-- LOGIN SCREEN -->
+<div class="login-screen" id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">Richter <span>SMS</span></div>
+    <div class="login-sub">Internal Tool</div>
+    <div class="login-instruction">Sign in with your Richter Google account to continue.</div>
+    <div class="g-signin-wrap">
+      <div id="g-signin-btn"></div>
+    </div>
+    <div class="login-error" id="login-error">Access restricted to @richter10point2.com accounts.</div>
+  </div>
+</div>
+
 <div class="header">
   <div>
     <div class="logo">Richter <span>SMS</span></div>
   </div>
   <div class="header-status">
+    <div id="user-chip" class="user-chip" style="display:none"></div>
     <div id="sheets-status"><span class="status-dot"></span>Sheets</div>
     <div id="telnyx-status"><span class="status-dot"></span>Telnyx</div>
   </div>
@@ -887,6 +979,112 @@
 
 <script src="config.js"></script>
 <script>
+// ─── AUTH ─────────────────────────────────────────────────────────────────────
+const ALLOWED_DOMAIN = 'richter10point2.com';
+const OAUTH_CLIENT_ID = '895699243158-3p7lvsbhbsrnqbu2mjcc56rebolffhlv.apps.googleusercontent.com';
+let currentUser = null;
+
+function initGoogleAuth() {
+  // Check for existing session
+  const saved = sessionStorage.getItem('richter_user');
+  if (saved) {
+    try {
+      currentUser = JSON.parse(saved);
+      onAuthSuccess(currentUser, false);
+      return;
+    } catch(e) { sessionStorage.removeItem('richter_user'); }
+  }
+
+  // Show login screen
+  document.getElementById('login-screen').classList.add('show');
+
+  // Init Google Identity Services
+  google.accounts.id.initialize({
+    client_id: OAUTH_CLIENT_ID,
+    callback: handleGoogleCredential,
+    auto_select: false,
+  });
+
+  google.accounts.id.renderButton(
+    document.getElementById('g-signin-btn'),
+    {
+      theme: 'filled_black',
+      size: 'large',
+      text: 'signin_with',
+      shape: 'rectangular',
+      width: 260
+    }
+  );
+}
+
+function handleGoogleCredential(response) {
+  try {
+    // Decode JWT payload (no verification needed — Google already verified it)
+    const payload = JSON.parse(atob(response.credential.split('.')[1]));
+    const email = payload.email || '';
+    const domain = email.split('@')[1];
+
+    if (domain !== ALLOWED_DOMAIN) {
+      document.getElementById('login-error').classList.add('show');
+      return;
+    }
+
+    currentUser = {
+      email: payload.email,
+      name: payload.name,
+      picture: payload.picture,
+      given_name: payload.given_name
+    };
+
+    sessionStorage.setItem('richter_user', JSON.stringify(currentUser));
+    onAuthSuccess(currentUser, true);
+  } catch(e) {
+    document.getElementById('login-error').textContent = 'Sign in failed. Please try again.';
+    document.getElementById('login-error').classList.add('show');
+  }
+}
+
+function onAuthSuccess(user, fresh) {
+  document.getElementById('login-screen').classList.remove('show');
+
+  // Show user chip in header
+  const chip = document.getElementById('user-chip');
+  chip.style.display = 'flex';
+  chip.innerHTML = `
+    ${user.picture ? `<img class="user-avatar" src="${user.picture}" alt="">` : ''}
+    <span>${user.email}</span>
+    <button class="sign-out-btn" onclick="signOut()">Sign out</button>
+  `;
+
+  if (fresh) {
+    // Fresh login — init app
+    initApp();
+  }
+}
+
+function signOut() {
+  sessionStorage.removeItem('richter_user');
+  currentUser = null;
+  google.accounts.id.disableAutoSelect();
+  location.reload();
+}
+
+// Wait for Google script to load then init auth
+window.addEventListener('load', () => {
+  if (typeof google !== 'undefined') {
+    initGoogleAuth();
+  } else {
+    // Script still loading
+    const interval = setInterval(() => {
+      if (typeof google !== 'undefined') {
+        clearInterval(interval);
+        initGoogleAuth();
+      }
+    }, 100);
+  }
+});
+</script>
+<script>
 // ─── STATE ────────────────────────────────────────────────────────────────────
 let allContacts = [];
 let filteredContacts = [];
@@ -897,7 +1095,7 @@ let sheetsToken = null;
 let tokenExpiry = 0;
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
-window.addEventListener('DOMContentLoaded', async () => {
+async function initApp() {
   updateFromNumberDisplay();
   await getGoogleToken();
   await loadContacts();
