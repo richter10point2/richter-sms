@@ -1012,6 +1012,36 @@
     margin-left: auto;
   }
 
+  .merge-tag-btn {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    padding: 3px 8px;
+    border: 1px solid var(--border2);
+    border-radius: 3px;
+    background: var(--surface2);
+    color: var(--accent);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .merge-tag-btn:hover { background: rgba(195,0,0,0.05); border-color: var(--accent); }
+
+  .message-segment-btn {
+    font-family: 'Open Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 14px;
+    border: 1px solid var(--accent);
+    border-radius: 3px;
+    background: var(--accent);
+    color: white;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+    display: none;
+  }
+  .message-segment-btn.show { display: block; }
+  .message-segment-btn:hover { background: var(--accent2); }
+
   /* SCROLLBAR */
   ::-webkit-scrollbar { width: 4px; height: 4px; }
   ::-webkit-scrollbar-track { background: var(--surface2); }
@@ -1160,10 +1190,13 @@
     <div class="table-wrap">
       <div class="table-toolbar">
         <input class="search-input" type="text" placeholder="Search name, company, phone..." oninput="filterContacts(this.value)">
-        <div class="filter-pills">
-          <button class="pill active" onclick="setFilter('all', this)">All</button>
-          <button class="pill" onclick="setFilter('active', this)">Active</button>
-          <button class="pill" onclick="setFilter('optout', this)">Opted Out</button>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <button class="message-segment-btn" id="message-segment-btn" onclick="messageFilteredContacts()">Message these contacts</button>
+          <div class="filter-pills">
+            <button class="pill active" onclick="setFilter('all', this)">All</button>
+            <button class="pill" onclick="setFilter('active', this)">Active</button>
+            <button class="pill" onclick="setFilter('optout', this)">Opted Out</button>
+          </div>
         </div>
       </div>
       <div class="table-scroll">
@@ -1192,25 +1225,36 @@
     <div class="section-head">
       <div>
         <div class="section-title">Compose & Send</div>
-        <div class="section-sub">Write your message and select recipients</div>
+        <div class="section-sub" id="compose-sub">Write your message and select recipients</div>
       </div>
+    </div>
+
+    <!-- Segment banner shown when a custom segment is loaded -->
+    <div id="segment-banner" style="display:none;background:rgba(195,0,0,0.05);border:1px solid rgba(195,0,0,0.2);border-radius:3px;padding:10px 16px;margin-bottom:16px;display:none;align-items:center;justify-content:space-between;">
+      <div style="font-size:13px;color:var(--accent);font-weight:600;" id="segment-banner-text"></div>
+      <button class="btn btn-sm" onclick="clearSegment()">Clear — Use All Contacts</button>
     </div>
 
     <div class="compose-grid">
       <div>
         <div class="compose-card">
-          <label class="compose-label">Recipient Segment</label>
-          <select class="segment-select" id="segment-select" onchange="updateRecipientCount()">
-            <option value="all">All Active Contacts</option>
-          </select>
+          <label class="compose-label">Message</label>
 
-          <div style="margin-top:20px;">
-            <label class="compose-label">Message</label>
-            <textarea class="compose-textarea" id="message-input" placeholder="Hi [First Name], Spencer from Richter here..." oninput="updateCompose()"></textarea>
-            <div class="char-count" id="char-count">
-              <span id="char-num">0 / 160</span>
-              <span id="segment-count">1 segment</span>
-            </div>
+          <!-- Merge tag toolbar -->
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
+            <span style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;align-self:center;">Insert:</span>
+            <button class="merge-tag-btn" onclick="insertTag('[first_name]')">[first_name]</button>
+            <button class="merge-tag-btn" onclick="insertTag('[last_name]')">[last_name]</button>
+            <button class="merge-tag-btn" onclick="insertTag('[company]')">[company]</button>
+            <button class="merge-tag-btn" onclick="insertTag('[title]')">[title]</button>
+            <button class="merge-tag-btn" onclick="insertTag('[state]')">[state]</button>
+            <button class="merge-tag-btn" onclick="insertTag('[country]')">[country]</button>
+          </div>
+
+          <textarea class="compose-textarea" id="message-input" placeholder="Hi [first_name], Spencer from Richter here..." oninput="updateCompose()"></textarea>
+          <div class="char-count" id="char-count">
+            <span id="char-num">0 / 160</span>
+            <span id="segment-count">1 segment</span>
           </div>
 
           <div class="compose-meta">
@@ -1248,6 +1292,7 @@
 
       <div class="phone-preview">
         <label class="compose-label" style="text-align:center;display:block;">Preview</label>
+        <div style="font-size:10px;color:var(--text3);text-align:center;margin-bottom:8px;" id="preview-contact-label"></div>
         <div class="phone-frame">
           <div class="phone-carrier">SMS Message</div>
           <div class="phone-bubble-wrap">
@@ -1549,6 +1594,7 @@ function renderContacts() {
 function filterContacts(q) {
   searchQuery = q;
   renderContacts();
+  updateRecipientCount();
 }
 
 function setFilter(filter, btn) {
@@ -1556,6 +1602,7 @@ function setFilter(filter, btn) {
   document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
   btn.classList.add('active');
   renderContacts();
+  updateRecipientCount();
 }
 
 function updateStats(total, active, optout) {
@@ -1565,8 +1612,6 @@ function updateStats(total, active, optout) {
 }
 
 function updateSegmentOptions() {
-  const sel = document.getElementById('segment-select');
-  sel.innerHTML = `<option value="all">All Active Contacts (${allContacts.filter(c=>c.status==='active').length})</option>`;
   updateRecipientCount();
 }
 
@@ -1753,6 +1798,106 @@ function startPolling() {
 }
 
 
+// ─── SEGMENTS ─────────────────────────────────────────────────────────────────
+let activeSegment = null; // null = all contacts, otherwise { name, ids: Set }
+
+function getRecipients() {
+  if (activeSegment) {
+    return allContacts.filter(c => c.status === 'active' && c.phone && activeSegment.ids.has(c.id));
+  }
+  return allContacts.filter(c => c.status === 'active' && c.phone);
+}
+
+function messageFilteredContacts() {
+  const active = filteredContacts.filter(c => c.status === 'active' && c.phone);
+  if (active.length === 0) { toast('No active contacts in current filter', 'error'); return; }
+
+  const query = document.querySelector('.search-input')?.value?.trim() || '';
+  const segmentName = query ? `Search: "${query}"` : 'Filtered contacts';
+
+  activeSegment = {
+    name: segmentName,
+    ids: new Set(active.map(c => c.id))
+  };
+
+  // Switch to compose
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('panel-compose').classList.add('active');
+  document.querySelectorAll('.nav-btn')[1].classList.add('active');
+
+  updateSegmentBanner();
+  updateRecipientCount();
+}
+
+function clearSegment() {
+  activeSegment = null;
+  updateSegmentBanner();
+  updateRecipientCount();
+}
+
+function updateSegmentBanner() {
+  const banner = document.getElementById('segment-banner');
+  const bannerText = document.getElementById('segment-banner-text');
+  if (activeSegment) {
+    bannerText.textContent = `Segment: ${activeSegment.name} — ${activeSegment.ids.size} contacts`;
+    banner.style.display = 'flex';
+  } else {
+    banner.style.display = 'none';
+  }
+}
+
+function messageAgain(row) {
+  if (!row.segmentIds) return;
+  const ids = row.segmentIds.split(',').map(s => s.trim()).filter(Boolean);
+  activeSegment = {
+    name: row.segmentName || 'Previous segment',
+    ids: new Set(ids)
+  };
+
+  // Switch to compose and pre-fill message
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('panel-compose').classList.add('active');
+  document.querySelectorAll('.nav-btn')[1].classList.add('active');
+
+  document.getElementById('message-input').value = row.message || '';
+  updateSegmentBanner();
+  updateCompose();
+}
+
+// ─── MERGE TAGS ───────────────────────────────────────────────────────────────
+const MERGE_FALLBACKS = {
+  '[first_name]': 'there',
+  '[last_name]': '',
+  '[company]': 'your organization',
+  '[title]': '',
+  '[state]': '',
+  '[country]': ''
+};
+
+function applyMergeTags(msg, contact) {
+  return msg
+    .replace(/\[first_name\]/gi, contact.firstName || MERGE_FALLBACKS['[first_name]'])
+    .replace(/\[last_name\]/gi, contact.lastName || MERGE_FALLBACKS['[last_name]'])
+    .replace(/\[company\]/gi, contact.company || MERGE_FALLBACKS['[company]'])
+    .replace(/\[title\]/gi, contact.title || MERGE_FALLBACKS['[title]'])
+    .replace(/\[state\]/gi, contact.state || MERGE_FALLBACKS['[state]'])
+    .replace(/\[country\]/gi, contact.country || MERGE_FALLBACKS['[country]']);
+}
+
+function insertTag(tag) {
+  const ta = document.getElementById('message-input');
+  const start = ta.selectionStart;
+  const end = ta.selectionEnd;
+  const val = ta.value;
+  ta.value = val.substring(0, start) + tag + val.substring(end);
+  ta.selectionStart = ta.selectionEnd = start + tag.length;
+  ta.focus();
+  updateCompose();
+}
+
+// ─── COMPOSE ──────────────────────────────────────────────────────────────────
 function updateCompose() {
   const msg = document.getElementById('message-input').value;
   const len = msg.length;
@@ -1765,22 +1910,45 @@ function updateCompose() {
   segCount.textContent = `${segs} segment${segs > 1 ? 's' : ''}`;
   countEl.className = 'char-count' + (len > 320 ? ' over' : len > 140 ? ' warn' : '');
 
+  // Preview with first recipient's merge tags applied
   const preview = document.getElementById('preview-bubble');
-  const fullMsg = ensureStopLanguage(msg);
-  preview.textContent = fullMsg || 'Your message will appear here...';
+  const previewLabel = document.getElementById('preview-contact-label');
+  const recipients = getRecipients();
+  const previewContact = recipients[0] || {};
+  const fullMsg = ensureStopLanguage(applyMergeTags(msg, previewContact));
+
+  if (msg) {
+    preview.textContent = fullMsg;
+    if (previewContact.firstName || previewContact.company) {
+      previewLabel.textContent = `Previewing as ${previewContact.firstName || previewContact.company}`;
+    } else {
+      previewLabel.textContent = '';
+    }
+  } else {
+    preview.textContent = 'Your message will appear here...';
+    previewLabel.textContent = '';
+  }
 
   updateRecipientCount();
 }
 
 function updateRecipientCount() {
-  const active = allContacts.filter(c => c.status === 'active' && c.phone);
-  const count = active.length;
+  const recipients = getRecipients();
+  const count = recipients.length;
   document.getElementById('recipient-count').textContent = count.toLocaleString();
   document.getElementById('est-cost').textContent = count > 0 ? `~$${(count * 0.005).toFixed(2)}` : '—';
 
   const msg = document.getElementById('message-input').value.trim();
-  const sendBtn = document.getElementById('send-btn');
-  sendBtn.disabled = !msg || count === 0;
+  document.getElementById('send-btn').disabled = !msg || count === 0;
+
+  // Show/hide message segment button on contacts page
+  const btn = document.getElementById('message-segment-btn');
+  if (btn) {
+    const activeFiltered = filteredContacts.filter(c => c.status === 'active' && c.phone);
+    const showBtn = activeFiltered.length > 0 && activeFiltered.length < allContacts.filter(c => c.status === 'active').length;
+    btn.textContent = `Message these ${activeFiltered.length} contacts`;
+    btn.className = 'message-segment-btn' + (showBtn ? ' show' : '');
+  }
 }
 
 function updateFromNumberDisplay() {}
@@ -1877,11 +2045,13 @@ function confirmSend() {
   const msg = document.getElementById('message-input').value.trim();
   if (!msg) { toast('Write a message first', 'error'); return; }
 
-  const recipients = allContacts.filter(c => c.status === 'active' && c.phone);
-  if (recipients.length === 0) { toast('No active contacts with phone numbers', 'error'); return; }
+  const recipients = getRecipients();
+  if (recipients.length === 0) { toast('No active contacts in this segment', 'error'); return; }
 
+  const segLabel = activeSegment ? activeSegment.name : 'All Active Contacts';
   document.getElementById('modal-count').textContent = recipients.length.toLocaleString();
-  document.getElementById('modal-preview').textContent = ensureStopLanguage(msg);
+  document.getElementById('modal-sub').innerHTML = `Sending to <strong>${recipients.length.toLocaleString()}</strong> contacts in <strong>${escHtml(segLabel)}</strong>. This cannot be undone.`;
+  document.getElementById('modal-preview').textContent = ensureStopLanguage(applyMergeTags(msg, recipients[0] || {}));
   document.getElementById('confirm-modal').classList.add('open');
 }
 
@@ -1891,8 +2061,10 @@ function closeModal() {
 
 async function executeSend() {
   closeModal();
-  const msg = ensureStopLanguage(document.getElementById('message-input').value.trim());
-  const recipients = allContacts.filter(c => c.status === 'active' && c.phone);
+  const rawMsg = document.getElementById('message-input').value.trim();
+  const recipients = getRecipients();
+  const segmentName = activeSegment ? activeSegment.name : 'All Active Contacts';
+  const segmentIds = activeSegment ? [...activeSegment.ids].join(',') : '';
 
   const progressWrap = document.getElementById('progress-wrap');
   const progressFill = document.getElementById('progress-fill');
@@ -1910,8 +2082,10 @@ async function executeSend() {
     progressFill.style.width = pct + '%';
     progressLabel.textContent = `Sending ${i + 1} of ${recipients.length}...`;
 
+    const personalizedMsg = ensureStopLanguage(applyMergeTags(rawMsg, contact));
+
     try {
-      const result = await api('POST', '/send', { to: contact.phone, message: msg });
+      const result = await api('POST', '/send', { to: contact.phone, message: personalizedMsg });
       if (result.success) sent++;
       else failed++;
     } catch (e) {
@@ -1922,10 +2096,12 @@ async function executeSend() {
   }
 
   await api('POST', '/log-send', {
-    message: msg,
+    message: rawMsg,
     recipients: recipients.length,
     delivered: sent,
-    failed
+    failed,
+    segmentName,
+    segmentIds
   });
 
   progressWrap.classList.remove('show');
@@ -1934,6 +2110,8 @@ async function executeSend() {
 
   toast(`Done — ${sent} sent, ${failed} failed`, sent > 0 ? 'success' : 'error');
   document.getElementById('message-input').value = '';
+  activeSegment = null;
+  updateSegmentBanner();
   updateCompose();
   await loadHistory();
 }
@@ -1955,11 +2133,14 @@ async function loadHistory() {
 
     document.getElementById('stat-sends').textContent = rows.length.toLocaleString();
 
-    el.innerHTML = rows.map(row => `
+    el.innerHTML = rows.map((row, i) => `
       <div class="history-card">
-        <div>
+        <div style="flex:1;min-width:0;">
           <div class="history-msg">${escHtml(row.message || '')}</div>
-          <div class="history-meta">${formatDate(row.date)}</div>
+          <div class="history-meta" style="margin-top:4px;">
+            ${formatDate(row.date)}
+            ${row.segmentName ? `&nbsp;·&nbsp;<span style="color:var(--accent)">${escHtml(row.segmentName)}</span>` : ''}
+          </div>
         </div>
         <div class="history-stats">
           <div>
@@ -1973,6 +2154,9 @@ async function loadHistory() {
           <div>
             <div class="history-stat-val" style="color:var(--red)">${row.failed.toLocaleString()}</div>
             <div class="history-stat-label">Failed</div>
+          </div>
+          <div style="display:flex;align-items:center;">
+            ${row.segmentIds ? `<button class="btn btn-sm" onclick='messageAgain(${JSON.stringify(row)})'>Message Again</button>` : ''}
           </div>
         </div>
       </div>
