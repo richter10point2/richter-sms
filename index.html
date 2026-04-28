@@ -2184,7 +2184,8 @@ async function executeSend() {
     delivered: sent,
     failed,
     segmentName,
-    segmentIds
+    segmentIds,
+    sentBy: currentUser?.email || ''
   });
 
   progressWrap.classList.remove('show');
@@ -2223,6 +2224,7 @@ async function loadHistory() {
           <div class="history-meta" style="margin-top:4px;">
             ${formatDate(row.date)}
             ${row.segmentName ? `&nbsp;·&nbsp;<span style="color:var(--accent)">${escHtml(row.segmentName)}</span>` : ''}
+            ${row.sentBy ? `&nbsp;·&nbsp;<span style="color:var(--text3)">${escHtml(row.sentBy)}</span>` : ''}
           </div>
         </div>
         <div class="history-stats">
