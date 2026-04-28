@@ -1026,7 +1026,6 @@ function initGoogleAuth() {
 
 function handleGoogleCredential(response) {
   try {
-    // Decode JWT payload (no verification needed — Google already verified it)
     const payload = JSON.parse(atob(response.credential.split('.')[1]));
     const email = payload.email || '';
     const domain = email.split('@')[1];
@@ -1036,11 +1035,14 @@ function handleGoogleCredential(response) {
       return;
     }
 
+    idToken = response.credential;
+
     currentUser = {
       email: payload.email,
       name: payload.name,
       picture: payload.picture,
-      given_name: payload.given_name
+      given_name: payload.given_name,
+      credential: response.credential
     };
 
     sessionStorage.setItem('richter_user', JSON.stringify(currentUser));
@@ -1054,7 +1056,8 @@ function handleGoogleCredential(response) {
 function onAuthSuccess(user, fresh) {
   document.getElementById('login-screen').classList.remove('show');
 
-  // Show user chip in header
+  idToken = user.credential;
+
   const chip = document.getElementById('user-chip');
   chip.style.display = 'flex';
   chip.innerHTML = `
@@ -1063,10 +1066,7 @@ function onAuthSuccess(user, fresh) {
     <button class="sign-out-btn" onclick="signOut()">Sign out</button>
   `;
 
-  if (fresh) {
-    // Fresh login — init app
-    initApp();
-  }
+  if (fresh) initApp();
 }
 
 function signOut() {
@@ -1092,23 +1092,39 @@ window.addEventListener('load', () => {
 });
 </script>
 <script>
+const WORKER_URL = 'https://richter-sms.website-4c6.workers.dev';
+
 // ─── STATE ────────────────────────────────────────────────────────────────────
 let allContacts = [];
 let filteredContacts = [];
 let activeFilter = 'all';
 let searchQuery = '';
-let sendHistory = [];
-let sheetsToken = null;
-let tokenExpiry = 0;
+let idToken = null;
+
+// ─── WORKER API ───────────────────────────────────────────────────────────────
+async function api(method, path, body) {
+  const opts = {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${idToken}`
+    }
+  };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(WORKER_URL + path, opts);
+  return res.json();
+}
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 async function initApp() {
-  updateFromNumberDisplay();
-  await getGoogleToken();
+  setStatus('sheets-status', 'live', 'Sheets');
+  setStatus('telnyx-status', 'live', 'Telnyx');
+  document.getElementById('from-number-display').textContent = '(425) 800-0435';
+  document.getElementById('from-number-display').style.color = 'var(--green)';
   await loadContacts();
   await loadHistory();
   updateCompose();
-});
+}
 
 // ─── NAVIGATION ───────────────────────────────────────────────────────────────
 function switchPanel(name) {
@@ -1120,127 +1136,20 @@ function switchPanel(name) {
   if (name === 'history') loadHistory();
 }
 
-// ─── GOOGLE SHEETS AUTH ───────────────────────────────────────────────────────
-async function getGoogleToken() {
-  if (sheetsToken && Date.now() < tokenExpiry) return sheetsToken;
-
-  try {
-    const now = Math.floor(Date.now() / 1000);
-    const header = btoa(JSON.stringify({ alg: 'RS256', typ: 'JWT' })).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
-    const payload = btoa(JSON.stringify({
-      iss: CONFIG.SERVICE_ACCOUNT_EMAIL,
-      scope: 'https://www.googleapis.com/auth/spreadsheets',
-      aud: 'https://oauth2.googleapis.com/token',
-      exp: now + 3600,
-      iat: now
-    })).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
-
-    const signingInput = `${header}.${payload}`;
-    const key = await importPrivateKey(CONFIG.PRIVATE_KEY);
-    const signature = await signJWT(signingInput, key);
-    const jwt = `${signingInput}.${signature}`;
-
-    const res = await fetch('https://oauth2.googleapis.com/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: `grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=${jwt}`
-    });
-
-    const data = await res.json();
-    sheetsToken = data.access_token;
-    tokenExpiry = Date.now() + 3500 * 1000;
-    setStatus('sheets-status', 'live', 'Sheets');
-    return sheetsToken;
-  } catch (e) {
-    setStatus('sheets-status', 'err', 'Sheets');
-    toast('Google Sheets auth failed — check your private key in config.js', 'error');
-    return null;
-  }
-}
-
-async function importPrivateKey(pem) {
-  const pemContents = pem.replace(/-----BEGIN RSA PRIVATE KEY-----/, '')
-    .replace(/-----END RSA PRIVATE KEY-----/, '')
-    .replace(/-----BEGIN PRIVATE KEY-----/, '')
-    .replace(/-----END PRIVATE KEY-----/, '')
-    .replace(/\s/g, '');
-  const binaryDer = Uint8Array.from(atob(pemContents), c => c.charCodeAt(0));
-  return await crypto.subtle.importKey('pkcs8', binaryDer.buffer,
-    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['sign']);
-}
-
-async function signJWT(input, key) {
-  const enc = new TextEncoder();
-  const sig = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', key, enc.encode(input));
-  return btoa(String.fromCharCode(...new Uint8Array(sig))).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
-}
-
-// ─── SHEETS API ───────────────────────────────────────────────────────────────
-async function sheetsGet(range) {
-  const token = await getGoogleToken();
-  if (!token) return null;
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SHEET_ID}/values/${encodeURIComponent(range)}`;
-  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-  return res.json();
-}
-
-async function sheetsAppend(range, values) {
-  const token = await getGoogleToken();
-  if (!token) return null;
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SHEET_ID}/values/${encodeURIComponent(range)}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`;
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ values })
-  });
-  return res.json();
-}
-
-async function sheetsUpdate(range, values) {
-  const token = await getGoogleToken();
-  if (!token) return null;
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SHEET_ID}/values/${encodeURIComponent(range)}?valueInputOption=RAW`;
-  const res = await fetch(url, {
-    method: 'PUT',
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ values })
-  });
-  return res.json();
-}
-
 // ─── CONTACTS ─────────────────────────────────────────────────────────────────
 async function loadContacts() {
   const tbody = document.getElementById('contacts-tbody');
   tbody.innerHTML = '<tr><td colspan="7"><div class="loading"><div class="spinner"></div>Loading...</div></td></tr>';
 
   try {
-    // Load optouts first
-    const optoutData = await sheetsGet('optouts!A:B');
-    const optoutNumbers = new Set();
-    if (optoutData && optoutData.values) {
-      optoutData.values.slice(1).forEach(row => {
-        if (row[0]) optoutNumbers.add(normalizePhone(row[0]));
-      });
-    }
+    const data = await api('GET', '/contacts');
+    allContacts = data.contacts || [];
 
-    const data = await sheetsGet('contacts!A:H');
-    if (!data || !data.values || data.values.length < 2) {
+    if (allContacts.length === 0) {
       tbody.innerHTML = '<tr><td colspan="7"><div class="empty"><div class="empty-icon">📭</div><div class="empty-label">No contacts yet — upload a CSV to get started</div></div></td></tr>';
       updateStats(0, 0, 0);
       return;
     }
-
-    allContacts = data.values.slice(1).map((row, i) => ({
-      rowIndex: i + 2,
-      id: row[0] || '',
-      firstName: row[1] || '',
-      lastName: row[2] || '',
-      company: row[3] || '',
-      phone: row[4] || '',
-      email: row[5] || '',
-      status: optoutNumbers.has(normalizePhone(row[4])) ? 'optout' : (row[6] || 'active'),
-      dateAdded: row[7] || ''
-    })).filter(c => c.phone || c.email);
 
     renderContacts();
     updateStats(
@@ -1249,8 +1158,10 @@ async function loadContacts() {
       allContacts.filter(c => c.status === 'optout').length
     );
     updateSegmentOptions();
+    setStatus('sheets-status', 'live', 'Sheets');
   } catch (e) {
     tbody.innerHTML = '<tr><td colspan="7"><div class="empty"><div class="empty-label">Error loading contacts</div></div></td></tr>';
+    setStatus('sheets-status', 'err', 'Sheets');
     toast('Error loading contacts: ' + e.message, 'error');
   }
 }
@@ -1367,7 +1278,7 @@ function processCSV(file) {
     if (newRows.length === 0) { toast('No valid phone numbers found', 'error'); return; }
 
     toast(`Uploading ${newRows.length} contacts...`);
-    await sheetsAppend('contacts!A:H', newRows);
+    await api('POST', '/contacts', { rows: newRows });
     toast(`${newRows.length} contacts added successfully`, 'success');
     await loadContacts();
   };
@@ -1395,8 +1306,7 @@ function parseCSV(text) {
 // ─── OPT OUT ──────────────────────────────────────────────────────────────────
 async function manualOptOut(phone) {
   if (!confirm(`Opt out ${phone}?`)) return;
-  const normalized = normalizePhone(phone);
-  await sheetsAppend('optouts!A:B', [[normalized, new Date().toISOString()]]);
+  await api('POST', '/optout', { phone });
   toast('Contact opted out', 'success');
   await loadContacts();
 }
@@ -1429,22 +1339,10 @@ function updateRecipientCount() {
 
   const msg = document.getElementById('message-input').value.trim();
   const sendBtn = document.getElementById('send-btn');
-  sendBtn.disabled = !msg || count === 0 || !CONFIG.TELNYX_API_KEY || CONFIG.TELNYX_API_KEY === 'YOUR_TELNYX_API_KEY';
+  sendBtn.disabled = !msg || count === 0;
 }
 
-function updateFromNumberDisplay() {
-  const num = CONFIG.TELNYX_FROM_NUMBER;
-  const el = document.getElementById('from-number-display');
-  if (!num || num === '+1XXXXXXXXXX') {
-    el.textContent = 'Not configured';
-    el.style.color = 'var(--red)';
-    setStatus('telnyx-status', 'err', 'Telnyx');
-  } else {
-    el.textContent = formatPhone(num);
-    el.style.color = 'var(--green)';
-    setStatus('telnyx-status', 'live', 'Telnyx');
-  }
-}
+function updateFromNumberDisplay() {}
 
 function ensureStopLanguage(msg) {
   if (!msg) return msg;
@@ -1492,37 +1390,22 @@ async function executeSend() {
     progressLabel.textContent = `Sending ${i + 1} of ${recipients.length}...`;
 
     try {
-      const res = await fetch('https://api.telnyx.com/v2/messages', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${CONFIG.TELNYX_API_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          from: CONFIG.TELNYX_FROM_NUMBER,
-          to: contact.phone,
-          text: msg
-        })
-      });
-
-      if (res.ok) sent++;
+      const result = await api('POST', '/send', { to: contact.phone, message: msg });
+      if (result.success) sent++;
       else failed++;
     } catch (e) {
       failed++;
     }
 
-    // Rate limit: 10 messages per second max
     if (i % 10 === 9) await sleep(1000);
   }
 
-  // Log to send history
-  await sheetsAppend('send_history!A:E', [[
-    new Date().toISOString(),
-    msg,
-    recipients.length,
-    sent,
+  await api('POST', '/log-send', {
+    message: msg,
+    recipients: recipients.length,
+    delivered: sent,
     failed
-  ]]);
+  });
 
   progressWrap.classList.remove('show');
   progressFill.style.width = '0%';
@@ -1540,33 +1423,34 @@ async function loadHistory() {
   el.innerHTML = '<div class="loading"><div class="spinner"></div>Loading...</div>';
 
   try {
-    const data = await sheetsGet('send_history!A:E');
-    if (!data || !data.values || data.values.length < 2) {
+    const data = await api('GET', '/history');
+    const rows = data.history || [];
+
+    if (rows.length === 0) {
       el.innerHTML = '<div class="empty"><div class="empty-icon">📊</div><div class="empty-label">No sends yet</div></div>';
       document.getElementById('stat-sends').textContent = '0';
       return;
     }
 
-    const rows = data.values.slice(1).reverse();
     document.getElementById('stat-sends').textContent = rows.length.toLocaleString();
 
     el.innerHTML = rows.map(row => `
       <div class="history-card">
         <div>
-          <div class="history-msg">${escHtml(row[1] || '')}</div>
-          <div class="history-meta">${formatDate(row[0])}</div>
+          <div class="history-msg">${escHtml(row.message || '')}</div>
+          <div class="history-meta">${formatDate(row.date)}</div>
         </div>
         <div class="history-stats">
           <div>
-            <div class="history-stat-val" style="color:var(--text)">${parseInt(row[2]||0).toLocaleString()}</div>
+            <div class="history-stat-val" style="color:var(--text)">${row.recipients.toLocaleString()}</div>
             <div class="history-stat-label">Sent To</div>
           </div>
           <div>
-            <div class="history-stat-val" style="color:var(--green)">${parseInt(row[3]||0).toLocaleString()}</div>
+            <div class="history-stat-val" style="color:var(--green)">${row.delivered.toLocaleString()}</div>
             <div class="history-stat-label">Delivered</div>
           </div>
           <div>
-            <div class="history-stat-val" style="color:var(--red)">${parseInt(row[4]||0).toLocaleString()}</div>
+            <div class="history-stat-val" style="color:var(--red)">${row.failed.toLocaleString()}</div>
             <div class="history-stat-label">Failed</div>
           </div>
         </div>
