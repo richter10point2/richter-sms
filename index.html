@@ -171,6 +171,14 @@
     padding: 0 32px;
     border-bottom: 1px solid var(--border);
     background: var(--surface);
+    justify-content: center;
+  }
+
+  .nav-inner {
+    display: flex;
+    gap: 2px;
+    max-width: 1200px;
+    width: 100%;
   }
 
   .nav-btn {
@@ -194,9 +202,47 @@
   }
 
   /* MAIN */
+  .main-wrap {
+    display: flex;
+    justify-content: center;
+  }
+
   .main {
     padding: 32px;
     max-width: 1200px;
+    width: 100%;
+  }
+
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* UPLOAD MODAL */
+  .upload-modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 600;
+    align-items: center;
+    justify-content: center;
+  }
+  .upload-modal-overlay.open { display: flex; }
+
+  .upload-modal {
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 4px;
+    padding: 32px;
+    width: 520px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+  }
+
+  .upload-modal-title {
+    font-family: 'Bitter', serif;
+    font-weight: 700;
+    font-size: 18px;
+    color: var(--text);
+    margin-bottom: 20px;
   }
 
   .panel { display: none; }
@@ -1067,11 +1113,14 @@
 </div>
 
 <div class="nav">
-  <button class="nav-btn active" onclick="switchPanel('contacts')">Contacts</button>
-  <button class="nav-btn" onclick="switchPanel('compose')">Compose & Send</button>
-  <button class="nav-btn" onclick="switchPanel('history')">Send History</button>
+  <div class="nav-inner">
+    <button class="nav-btn active" onclick="switchPanel('contacts')">Contacts</button>
+    <button class="nav-btn" onclick="switchPanel('compose')">Compose & Send</button>
+    <button class="nav-btn" onclick="switchPanel('history')">Send History</button>
+  </div>
 </div>
 
+<div class="main-wrap">
 <div class="main">
 
   <!-- CONTACTS PANEL -->
@@ -1082,22 +1131,12 @@
         <div class="section-sub">Manage your SMS list</div>
       </div>
       <div style="display:flex;gap:8px;">
-        <button class="btn" onclick="document.getElementById('csv-input').click()">Upload CSV</button>
+        <button class="btn" onclick="openUploadModal()">Upload CSV</button>
         <button class="btn btn-primary" onclick="loadContacts()">Refresh</button>
       </div>
     </div>
 
     <input type="file" id="csv-input" accept=".csv" style="display:none" onchange="handleCSVUpload(event)">
-
-    <div class="upload-zone" id="upload-zone"
-      onclick="document.getElementById('csv-input').click()"
-      ondragover="event.preventDefault();this.classList.add('drag')"
-      ondragleave="this.classList.remove('drag')"
-      ondrop="handleDrop(event)">
-      <div class="upload-icon">📋</div>
-      <div class="upload-label">Drop your Copper CSV export here</div>
-      <div class="upload-sub">or click to browse — first_name, last_name, company, phone, email columns expected</div>
-    </div>
 
     <div class="stats-bar">
       <div class="stat">
@@ -1235,6 +1274,26 @@
   </div>
 
 </div>
+</div>
+
+<!-- UPLOAD CSV MODAL -->
+<div class="upload-modal-overlay" id="upload-modal-overlay">
+  <div class="upload-modal">
+    <div class="upload-modal-title">Drop your contacts CSV here</div>
+    <div class="upload-zone" id="upload-zone"
+      onclick="document.getElementById('csv-input').click()"
+      ondragover="event.preventDefault();this.classList.add('drag')"
+      ondragleave="this.classList.remove('drag')"
+      ondrop="handleDrop(event)">
+      <div class="upload-icon">📋</div>
+      <div class="upload-label">Click to browse or drag and drop</div>
+      <div class="upload-sub">first_name, last_name, company, phone, email columns expected</div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;margin-top:16px;">
+      <button class="btn" onclick="closeUploadModal()">Cancel</button>
+    </div>
+  </div>
+</div>
 
 <!-- TEST SEND MODAL -->
 <div class="modal-overlay" id="test-modal">
@@ -1268,7 +1327,6 @@
 <!-- TOAST -->
 <div class="toast-wrap" id="toast-wrap"></div>
 
-<script src="config.js"></script>
 <script>
 // ─── AUTH ─────────────────────────────────────────────────────────────────────
 const ALLOWED_DOMAIN = 'richter10point2.com';
@@ -1512,6 +1570,15 @@ function updateSegmentOptions() {
   updateRecipientCount();
 }
 
+// ─── UPLOAD MODAL ─────────────────────────────────────────────────────────────
+function openUploadModal() {
+  document.getElementById('upload-modal-overlay').classList.add('open');
+}
+
+function closeUploadModal() {
+  document.getElementById('upload-modal-overlay').classList.remove('open');
+}
+
 // ─── CSV UPLOAD ───────────────────────────────────────────────────────────────
 function handleDrop(e) {
   e.preventDefault();
@@ -1565,6 +1632,7 @@ function processCSV(file) {
     toast(`Uploading ${newRows.length} contacts...`);
     await api('POST', '/contacts', { rows: newRows });
     toast(`${newRows.length} contacts added successfully`, 'success');
+    closeUploadModal();
     await loadContacts();
   };
   reader.readAsText(file);
