@@ -1145,6 +1145,12 @@
         <option value="optout">Opted Out</option>
       </select>
     </div>
+
+    <div class="panel-section-label">Notes</div>
+    <div class="field-group">
+      <label class="field-label">Internal Notes</label>
+      <textarea class="field-input" id="edit-notes" rows="4" style="resize:vertical;height:100px;" placeholder="Internal notes — not sent to contact"></textarea>
+    </div>
     <div class="contact-meta" id="edit-date-added"></div>
   </div>
   <div class="contact-panel-footer">
@@ -1170,6 +1176,7 @@
     <button class="nav-btn active" onclick="switchPanel('contacts')">Contacts</button>
     <button class="nav-btn" onclick="switchPanel('compose')">Compose & Send</button>
     <button class="nav-btn" onclick="switchPanel('history')">Send History</button>
+    <button class="nav-btn" onclick="switchPanel('replies')">Replies</button>
   </div>
 </div>
 
@@ -1316,7 +1323,8 @@
 
           <div style="margin-top:20px;display:flex;gap:8px;">
             <button class="btn" id="test-btn" onclick="openTestModal()" style="flex:0 0 auto;">Send Test</button>
-            <button class="btn btn-primary" id="send-btn" onclick="confirmSend()" style="flex:1" disabled>Send Message</button>
+            <button class="btn" onclick="openScheduleModal()" style="flex:0 0 auto;">Schedule</button>
+            <button class="btn btn-primary" id="send-btn" onclick="confirmSend()" style="flex:1" disabled>Send Now</button>
           </div>
 
           <div style="margin-top:12px;font-size:10px;color:var(--text3);line-height:1.6;">
@@ -1350,6 +1358,20 @@
     </div>
     <div id="history-list">
       <div class="loading"><div class="spinner"></div>Loading history...</div>
+    </div>
+  </div>
+
+  <!-- REPLIES PANEL -->
+  <div class="panel" id="panel-replies">
+    <div class="section-head">
+      <div>
+        <div class="section-title">Replies</div>
+        <div class="section-sub">Inbound messages from your contacts</div>
+      </div>
+      <button class="btn btn-primary" onclick="loadReplies()">Refresh</button>
+    </div>
+    <div id="replies-list">
+      <div class="loading"><div class="spinner"></div>Loading replies...</div>
     </div>
   </div>
 
@@ -1400,6 +1422,88 @@
     <div class="modal-actions">
       <button class="btn" onclick="closeModal()">Cancel</button>
       <button class="btn btn-primary" onclick="executeSend()">Send Now</button>
+    </div>
+  </div>
+</div>
+
+<!-- SEGMENT NAME MODAL -->
+<div class="modal-overlay" id="segment-name-modal">
+  <div class="modal">
+    <div class="modal-title">Name this segment</div>
+    <div class="modal-sub">Give this group a name so you can identify it in send history and message them again later.</div>
+    <input class="field-input" id="segment-name-input" type="text" placeholder="e.g. Baker Hughes Q2, Cisco VP List..." style="margin-bottom:20px;width:100%;">
+    <div class="modal-actions">
+      <button class="btn" onclick="closeSegmentNameModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="confirmSegmentName()">Continue to Compose</button>
+    </div>
+  </div>
+</div>
+
+<!-- SEND PREVIEW MODAL -->
+<div class="modal-overlay" id="preview-modal">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-title">Message Preview</div>
+    <div class="modal-sub">How your message will appear to a sample of recipients. Merge tags are applied per contact.</div>
+    <div id="preview-samples" style="margin-bottom:20px;max-height:360px;overflow-y:auto;"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closePreviewModal()">Edit Message</button>
+      <button class="btn btn-primary" onclick="proceedFromPreview()">Looks Good — Send</button>
+    </div>
+  </div>
+</div>
+
+<!-- SCHEDULE MODAL -->
+<div class="modal-overlay" id="schedule-modal">
+  <div class="modal">
+    <div class="modal-title">Schedule Send</div>
+    <div class="modal-sub">Choose a date and time. Sends are limited to business hours (9am–6pm) in your local timezone.</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
+      <div class="field-group">
+        <label class="field-label">Date</label>
+        <input class="field-input" id="schedule-date" type="date">
+      </div>
+      <div class="field-group">
+        <label class="field-label">Time</label>
+        <select class="field-select" id="schedule-time">
+          <option value="09:00">9:00 AM</option>
+          <option value="09:30">9:30 AM</option>
+          <option value="10:00">10:00 AM</option>
+          <option value="10:30">10:30 AM</option>
+          <option value="11:00">11:00 AM</option>
+          <option value="11:30">11:30 AM</option>
+          <option value="12:00">12:00 PM</option>
+          <option value="12:30">12:30 PM</option>
+          <option value="13:00">1:00 PM</option>
+          <option value="13:30">1:30 PM</option>
+          <option value="14:00">2:00 PM</option>
+          <option value="14:30">2:30 PM</option>
+          <option value="15:00">3:00 PM</option>
+          <option value="15:30">3:30 PM</option>
+          <option value="16:00">4:00 PM</option>
+          <option value="16:30">4:30 PM</option>
+          <option value="17:00">5:00 PM</option>
+          <option value="17:30">5:30 PM</option>
+          <option value="18:00">6:00 PM</option>
+        </select>
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:20px;" id="schedule-tz-label"></div>
+    <div class="modal-preview" id="schedule-preview" style="margin-bottom:16px;"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeScheduleModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="confirmSchedule()">Schedule Send</button>
+    </div>
+  </div>
+</div>
+
+<!-- DUPLICATE WARNING MODAL -->
+<div class="modal-overlay" id="duplicate-modal">
+  <div class="modal">
+    <div class="modal-title">Duplicates Found</div>
+    <div class="modal-sub" id="duplicate-modal-sub"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeDuplicateModal()">Cancel Upload</button>
+      <button class="btn btn-primary" onclick="confirmUploadSkipDuplicates()">Skip Duplicates & Upload</button>
     </div>
   </div>
 </div>
@@ -1548,6 +1652,8 @@ async function initApp() {
   await loadHistory();
   updateCompose();
   startPolling();
+  // Check for any scheduled sends due on load
+  api('POST', '/check-scheduled', {}).catch(() => {});
 }
 
 // ─── NAVIGATION ───────────────────────────────────────────────────────────────
@@ -1556,8 +1662,9 @@ function switchPanel(name) {
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('panel-' + name).classList.add('active');
   event.target.classList.add('active');
-  if (name === 'compose') updateRecipientCount();
+  if (name === 'compose') { updateRecipientCount(); api('POST', '/check-scheduled', {}).catch(() => {}); }
   if (name === 'history') loadHistory();
+  if (name === 'replies') loadReplies();
 }
 
 // ─── CONTACTS ─────────────────────────────────────────────────────────────────
@@ -1675,14 +1782,38 @@ function updateSelectionBar() {
   }
 }
 
+let pendingSegmentContacts = null;
+
 function messageSelectedContacts() {
   const selected = allContacts.filter(c => c.status === 'active' && c.phone && selectedContactIds.has(c.id));
   if (selected.length === 0) { toast('No active contacts selected', 'error'); return; }
+  pendingSegmentContacts = selected;
+
+  // Smart default name
+  const companies = [...new Set(selected.map(c => c.company).filter(Boolean))];
+  const defaultName = companies.length === 1
+    ? `${companies[0]} contacts`
+    : `${selected.length} selected contacts`;
+
+  document.getElementById('segment-name-input').value = defaultName;
+  document.getElementById('segment-name-modal').classList.add('open');
+}
+
+function closeSegmentNameModal() {
+  document.getElementById('segment-name-modal').classList.remove('open');
+  pendingSegmentContacts = null;
+}
+
+function confirmSegmentName() {
+  const name = document.getElementById('segment-name-input').value.trim() ||
+    `${pendingSegmentContacts.length} selected contacts`;
 
   activeSegment = {
-    name: `${selected.length} hand-picked contact${selected.length !== 1 ? 's' : ''}`,
-    ids: new Set(selected.map(c => c.id))
+    name,
+    ids: new Set(pendingSegmentContacts.map(c => c.id))
   };
+
+  closeSegmentNameModal();
 
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
@@ -1729,6 +1860,160 @@ function updateSegmentOptions() {
   updateRecipientCount();
 }
 
+// ─── SEND PREVIEW ─────────────────────────────────────────────────────────────
+function confirmSend() {
+  const msg = document.getElementById('message-input').value.trim();
+  if (!msg) { toast('Write a message first', 'error'); return; }
+  const recipients = getRecipients();
+  if (recipients.length === 0) { toast('No active contacts in this segment', 'error'); return; }
+  openPreviewModal();
+}
+
+function openPreviewModal() {
+  const msg = document.getElementById('message-input').value.trim();
+  const recipients = getRecipients();
+  const sampleSize = Math.min(5, recipients.length);
+  const samples = [];
+  const used = new Set();
+
+  // Try to get diverse samples
+  while (samples.length < sampleSize) {
+    const idx = Math.floor(Math.random() * recipients.length);
+    if (!used.has(idx)) { used.add(idx); samples.push(recipients[idx]); }
+    if (used.size === recipients.length) break;
+  }
+
+  const el = document.getElementById('preview-samples');
+  el.innerHTML = samples.map(c => {
+    const personalized = ensureStopLanguage(applyMergeTags(msg, c));
+    const name = `${c.firstName} ${c.lastName}`.trim() || c.company || c.phone;
+    return `
+      <div style="margin-bottom:12px;">
+        <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">${escHtml(name)}</div>
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:3px;padding:12px;font-size:13px;color:var(--text);line-height:1.6;white-space:pre-wrap;">${escHtml(personalized)}</div>
+      </div>
+    `;
+  }).join('');
+
+  if (recipients.length > sampleSize) {
+    el.innerHTML += `<div style="font-size:11px;color:var(--text3);text-align:center;padding:8px 0;">Showing ${sampleSize} of ${recipients.length} recipients</div>`;
+  }
+
+  document.getElementById('preview-modal').classList.add('open');
+}
+
+function closePreviewModal() {
+  document.getElementById('preview-modal').classList.remove('open');
+}
+
+function proceedFromPreview() {
+  closePreviewModal();
+  openConfirmModal();
+}
+
+function openConfirmModal() {
+  const msg = document.getElementById('message-input').value.trim();
+  const recipients = getRecipients();
+  const segLabel = activeSegment ? activeSegment.name : 'All Active Contacts';
+  document.getElementById('modal-count').textContent = recipients.length.toLocaleString();
+  document.getElementById('modal-sub').innerHTML = `Sending to <strong>${recipients.length.toLocaleString()}</strong> contacts in <strong>${escHtml(segLabel)}</strong>. This cannot be undone.`;
+  document.getElementById('modal-preview').textContent = ensureStopLanguage(applyMergeTags(msg, recipients[0] || {}));
+  document.getElementById('confirm-modal').classList.add('open');
+}
+
+// ─── SCHEDULE ─────────────────────────────────────────────────────────────────
+function openScheduleModal() {
+  const msg = document.getElementById('message-input').value.trim();
+  if (!msg) { toast('Write a message first', 'error'); return; }
+
+  // Set default date to tomorrow
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  document.getElementById('schedule-date').value = tomorrow.toISOString().split('T')[0];
+  document.getElementById('schedule-date').min = new Date().toISOString().split('T')[0];
+
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  document.getElementById('schedule-tz-label').textContent = `Your timezone: ${tz}`;
+  document.getElementById('schedule-preview').textContent = ensureStopLanguage(applyMergeTags(msg, getRecipients()[0] || {}));
+
+  document.getElementById('schedule-modal').classList.add('open');
+}
+
+function closeScheduleModal() {
+  document.getElementById('schedule-modal').classList.remove('open');
+}
+
+async function confirmSchedule() {
+  const msg = document.getElementById('message-input').value.trim();
+  const date = document.getElementById('schedule-date').value;
+  const time = document.getElementById('schedule-time').value;
+
+  if (!date || !time) { toast('Please select a date and time', 'error'); return; }
+
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const localDateTimeStr = `${date}T${time}:00`;
+  const localDate = new Date(localDateTimeStr);
+  const utcStr = localDate.toISOString();
+
+  const recipients = getRecipients();
+  const segmentName = activeSegment ? activeSegment.name : 'All Active Contacts';
+  const segmentIds = activeSegment ? [...activeSegment.ids].join(',') : '';
+
+  try {
+    await api('POST', '/schedule', {
+      message: msg,
+      segmentName,
+      segmentIds,
+      scheduledBy: currentUser?.email || '',
+      scheduledTimeUtc: utcStr,
+      timezone: tz
+    });
+
+    closeScheduleModal();
+    toast(`Scheduled for ${localDate.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}`, 'success');
+    document.getElementById('message-input').value = '';
+    activeSegment = null;
+    updateSegmentBanner();
+    updateCompose();
+    await loadHistory();
+  } catch(e) {
+    toast('Error scheduling send: ' + e.message, 'error');
+  }
+}
+
+// ─── REPLIES ──────────────────────────────────────────────────────────────────
+async function loadReplies() {
+  const el = document.getElementById('replies-list');
+  el.innerHTML = '<div class="loading"><div class="spinner"></div>Loading...</div>';
+
+  try {
+    const data = await api('GET', '/replies');
+    const replies = data.replies || [];
+
+    if (replies.length === 0) {
+      el.innerHTML = '<div class="empty"><div class="empty-icon">💬</div><div class="empty-label">No replies yet</div></div>';
+      return;
+    }
+
+    el.innerHTML = replies.map(r => `
+      <div class="history-card">
+        <div style="flex:1;min-width:0;">
+          <div class="history-msg">${escHtml(r.message)}</div>
+          <div class="history-meta" style="margin-top:4px;">
+            ${formatDate(r.date)}
+            &nbsp;·&nbsp;
+            <span style="color:var(--text2)">${escHtml(r.matchedContact || r.fromPhone)}</span>
+            &nbsp;·&nbsp;
+            <span style="color:var(--text3)">${escHtml(r.fromPhone)}</span>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  } catch(e) {
+    el.innerHTML = '<div class="empty"><div class="empty-label">Error loading replies</div></div>';
+  }
+}
+
 // ─── UPLOAD MODAL ─────────────────────────────────────────────────────────────
 function openUploadModal() {
   document.getElementById('upload-modal-overlay').classList.add('open');
@@ -1751,6 +2036,9 @@ function handleCSVUpload(e) {
   const file = e.target.files[0];
   if (file) processCSV(file);
 }
+
+let pendingUploadRows = [];
+let pendingDuplicatePhones = [];
 
 function processCSV(file) {
   const reader = new FileReader();
@@ -1783,18 +2071,51 @@ function processCSV(file) {
         normalizePhone(row[cols.phone]),
         cols.email !== -1 ? row[cols.email] || '' : '',
         'active',
-        now
+        now,
+        '', '', '', ''
       ]);
 
     if (newRows.length === 0) { toast('No valid phone numbers found', 'error'); return; }
 
-    toast(`Uploading ${newRows.length} contacts...`);
-    await api('POST', '/contacts', { rows: newRows });
-    toast(`${newRows.length} contacts added successfully`, 'success');
-    closeUploadModal();
-    await loadContacts();
+    // Check for duplicates
+    toast('Checking for duplicates...');
+    const phones = newRows.map(r => r[4]);
+    const dupData = await api('POST', '/check-duplicates', { phones });
+    const duplicateSet = new Set(dupData.duplicates || []);
+
+    if (duplicateSet.size > 0) {
+      pendingUploadRows = newRows;
+      pendingDuplicatePhones = duplicateSet;
+      document.getElementById('duplicate-modal-sub').textContent =
+        `Found ${duplicateSet.size} phone number${duplicateSet.size !== 1 ? 's' : ''} already in your contacts out of ${newRows.length} total rows. You can skip duplicates and upload only new contacts, or cancel to review.`;
+      document.getElementById('duplicate-modal').classList.add('open');
+      return;
+    }
+
+    await uploadRows(newRows);
   };
   reader.readAsText(file);
+}
+
+function closeDuplicateModal() {
+  document.getElementById('duplicate-modal').classList.remove('open');
+  pendingUploadRows = [];
+  pendingDuplicatePhones = new Set();
+}
+
+async function confirmUploadSkipDuplicates() {
+  closeDuplicateModal();
+  const filtered = pendingUploadRows.filter(r => !pendingDuplicatePhones.has(r[4]));
+  await uploadRows(filtered);
+}
+
+async function uploadRows(rows) {
+  if (rows.length === 0) { toast('No new contacts to upload', 'error'); return; }
+  toast(`Uploading ${rows.length} contacts...`);
+  await api('POST', '/contacts', { rows });
+  toast(`${rows.length} contacts added successfully`, 'success');
+  closeUploadModal();
+  await loadContacts();
 }
 
 function parseCSV(text) {
@@ -1844,6 +2165,7 @@ function openContactPanel(contactId) {
   document.getElementById('edit-state').value = contact.state || '';
   document.getElementById('edit-country').value = contact.country || '';
   document.getElementById('edit-status').value = contact.status || 'active';
+  document.getElementById('edit-notes').value = contact.notes || '';
   document.getElementById('edit-date-added').textContent =
     contact.dateAdded ? `Added ${formatDate(contact.dateAdded)}` : '';
   document.getElementById('save-indicator').classList.remove('show');
@@ -1872,6 +2194,7 @@ async function saveContact() {
     state: document.getElementById('edit-state').value.trim(),
     country: document.getElementById('edit-country').value.trim(),
     status: document.getElementById('edit-status').value,
+    notes: document.getElementById('edit-notes').value.trim(),
   };
 
   try {
@@ -2124,20 +2447,6 @@ async function executeTestSend() {
 }
 
 // ─── SEND ─────────────────────────────────────────────────────────────────────
-function confirmSend() {
-  const msg = document.getElementById('message-input').value.trim();
-  if (!msg) { toast('Write a message first', 'error'); return; }
-
-  const recipients = getRecipients();
-  if (recipients.length === 0) { toast('No active contacts in this segment', 'error'); return; }
-
-  const segLabel = activeSegment ? activeSegment.name : 'All Active Contacts';
-  document.getElementById('modal-count').textContent = recipients.length.toLocaleString();
-  document.getElementById('modal-sub').innerHTML = `Sending to <strong>${recipients.length.toLocaleString()}</strong> contacts in <strong>${escHtml(segLabel)}</strong>. This cannot be undone.`;
-  document.getElementById('modal-preview').textContent = ensureStopLanguage(applyMergeTags(msg, recipients[0] || {}));
-  document.getElementById('confirm-modal').classList.add('open');
-}
-
 function closeModal() {
   document.getElementById('confirm-modal').classList.remove('open');
 }
