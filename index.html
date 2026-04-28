@@ -766,6 +766,157 @@
   .pill:hover { color: var(--text2); border-color: var(--text3); }
   .pill.active { border-color: var(--accent); color: var(--accent); background: rgba(195,0,0,0.05); }
 
+  /* SLIDE-IN CONTACT PANEL */
+  .contact-panel-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.3);
+    z-index: 500;
+  }
+  .contact-panel-overlay.open { display: block; }
+
+  .contact-panel {
+    position: fixed;
+    top: 0;
+    right: -480px;
+    width: 480px;
+    height: 100vh;
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    z-index: 501;
+    display: flex;
+    flex-direction: column;
+    transition: right 0.25s ease;
+    box-shadow: -4px 0 24px rgba(0,0,0,0.08);
+  }
+
+  .contact-panel.open { right: 0; }
+
+  .contact-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px;
+    border-bottom: 3px solid var(--accent);
+    background: var(--surface);
+  }
+
+  .contact-panel-title {
+    font-family: 'Bitter', serif;
+    font-weight: 700;
+    font-size: 18px;
+    color: var(--text);
+  }
+
+  .contact-panel-close {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border2);
+    border-radius: 3px;
+    background: none;
+    cursor: pointer;
+    font-size: 16px;
+    color: var(--text3);
+    transition: all 0.15s;
+  }
+
+  .contact-panel-close:hover { border-color: var(--accent); color: var(--accent); }
+
+  .contact-panel-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px;
+  }
+
+  .contact-panel-footer {
+    padding: 16px 24px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    background: var(--surface);
+  }
+
+  .field-group {
+    margin-bottom: 18px;
+  }
+
+  .field-label {
+    font-family: 'Open Sans', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text3);
+    margin-bottom: 6px;
+    display: block;
+  }
+
+  .field-input {
+    font-family: 'Open Sans', sans-serif;
+    font-size: 13px;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    color: var(--text);
+    padding: 9px 12px;
+    border-radius: 3px;
+    width: 100%;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  .field-input:focus { border-color: var(--accent); background: var(--surface); }
+
+  .field-select {
+    font-family: 'Open Sans', sans-serif;
+    font-size: 13px;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    color: var(--text);
+    padding: 9px 12px;
+    border-radius: 3px;
+    width: 100%;
+    outline: none;
+    cursor: pointer;
+  }
+
+  .field-select:focus { border-color: var(--accent); }
+
+  .field-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .panel-section-label {
+    font-family: 'Bitter', serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text2);
+    margin: 20px 0 14px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .contact-meta {
+    font-size: 11px;
+    color: var(--text3);
+    margin-top: 4px;
+  }
+
+  .save-indicator {
+    font-size: 12px;
+    color: var(--green);
+    display: none;
+    align-items: center;
+    gap: 6px;
+  }
+  .save-indicator.show { display: flex; }
+
   /* SCROLLBAR */
   ::-webkit-scrollbar { width: 4px; height: 4px; }
   ::-webkit-scrollbar-track { background: var(--surface2); }
@@ -785,6 +936,73 @@
       <div id="g-signin-btn"></div>
     </div>
     <div class="login-error" id="login-error">Access restricted to @richter10point2.com accounts.</div>
+  </div>
+</div>
+
+<!-- CONTACT SLIDE-IN PANEL -->
+<div class="contact-panel-overlay" id="contact-panel-overlay" onclick="closeContactPanel()"></div>
+<div class="contact-panel" id="contact-panel">
+  <div class="contact-panel-header">
+    <div class="contact-panel-title" id="panel-contact-name">Contact</div>
+    <button class="contact-panel-close" onclick="closeContactPanel()">✕</button>
+  </div>
+  <div class="contact-panel-body">
+    <div class="panel-section-label">Personal Info</div>
+    <div class="field-row">
+      <div class="field-group">
+        <label class="field-label">First Name</label>
+        <input class="field-input" id="edit-firstName" type="text">
+      </div>
+      <div class="field-group">
+        <label class="field-label">Last Name</label>
+        <input class="field-input" id="edit-lastName" type="text">
+      </div>
+    </div>
+    <div class="field-group">
+      <label class="field-label">Title</label>
+      <input class="field-input" id="edit-title" type="text">
+    </div>
+    <div class="field-group">
+      <label class="field-label">Company</label>
+      <input class="field-input" id="edit-company" type="text">
+    </div>
+
+    <div class="panel-section-label">Contact Details</div>
+    <div class="field-group">
+      <label class="field-label">Phone</label>
+      <input class="field-input" id="edit-phone" type="tel">
+    </div>
+    <div class="field-group">
+      <label class="field-label">Email</label>
+      <input class="field-input" id="edit-email" type="email">
+    </div>
+
+    <div class="panel-section-label">Location</div>
+    <div class="field-row">
+      <div class="field-group">
+        <label class="field-label">State</label>
+        <input class="field-input" id="edit-state" type="text">
+      </div>
+      <div class="field-group">
+        <label class="field-label">Country</label>
+        <input class="field-input" id="edit-country" type="text">
+      </div>
+    </div>
+
+    <div class="panel-section-label">Status</div>
+    <div class="field-group">
+      <label class="field-label">SMS Status</label>
+      <select class="field-select" id="edit-status">
+        <option value="active">Active</option>
+        <option value="optout">Opted Out</option>
+      </select>
+    </div>
+    <div class="contact-meta" id="edit-date-added"></div>
+  </div>
+  <div class="contact-panel-footer">
+    <div class="save-indicator" id="save-indicator">✓ Saved</div>
+    <button class="btn" onclick="closeContactPanel()">Cancel</button>
+    <button class="btn btn-primary" onclick="saveContact()">Save Changes</button>
   </div>
 </div>
 
@@ -865,11 +1083,11 @@
           <thead>
             <tr>
               <th>Name</th>
+              <th>Title</th>
               <th>Company</th>
               <th>Phone</th>
-              <th>Email</th>
+              <th>State</th>
               <th>Status</th>
-              <th>Added</th>
               <th></th>
             </tr>
           </thead>
@@ -1124,6 +1342,7 @@ async function initApp() {
   await loadContacts();
   await loadHistory();
   updateCompose();
+  startPolling();
 }
 
 // ─── NAVIGATION ───────────────────────────────────────────────────────────────
@@ -1191,14 +1410,14 @@ function renderContacts() {
   }
 
   tbody.innerHTML = contacts.map(c => `
-    <tr>
-      <td style="color:var(--text)">${c.firstName} ${c.lastName}</td>
-      <td>${c.company}</td>
+    <tr onclick="openContactPanel('${c.id}')" style="cursor:pointer;">
+      <td style="color:var(--text);font-weight:600;">${c.firstName} ${c.lastName}</td>
+      <td>${c.title || '—'}</td>
+      <td>${c.company || '—'}</td>
       <td>${formatPhone(c.phone)}</td>
-      <td>${c.email}</td>
+      <td>${c.state || '—'}</td>
       <td><span class="badge badge-${c.status === 'optout' ? 'optout' : 'active'}">${c.status === 'optout' ? 'Opted Out' : 'Active'}</span></td>
-      <td>${c.dateAdded ? c.dateAdded.split('T')[0] : '—'}</td>
-      <td>${c.status === 'active' ? `<button class="btn btn-sm btn-danger" onclick="manualOptOut('${c.phone}')">Opt Out</button>` : ''}</td>
+      <td onclick="event.stopPropagation()">${c.status === 'active' ? `<button class="btn btn-sm btn-danger" onclick="manualOptOut('${c.phone}')">Opt Out</button>` : ''}</td>
     </tr>
   `).join('');
 }
@@ -1311,7 +1530,95 @@ async function manualOptOut(phone) {
   await loadContacts();
 }
 
-// ─── COMPOSE ──────────────────────────────────────────────────────────────────
+// ─── CONTACT PANEL ───────────────────────────────────────────────────────────
+let editingContact = null;
+
+function openContactPanel(contactId) {
+  const contact = allContacts.find(c => c.id === contactId);
+  if (!contact) return;
+
+  editingContact = { ...contact };
+
+  document.getElementById('panel-contact-name').textContent =
+    `${contact.firstName} ${contact.lastName}`.trim() || contact.company || 'Contact';
+
+  document.getElementById('edit-firstName').value = contact.firstName || '';
+  document.getElementById('edit-lastName').value = contact.lastName || '';
+  document.getElementById('edit-title').value = contact.title || '';
+  document.getElementById('edit-company').value = contact.company || '';
+  document.getElementById('edit-phone').value = contact.phone || '';
+  document.getElementById('edit-email').value = contact.email || '';
+  document.getElementById('edit-state').value = contact.state || '';
+  document.getElementById('edit-country').value = contact.country || '';
+  document.getElementById('edit-status').value = contact.status || 'active';
+  document.getElementById('edit-date-added').textContent =
+    contact.dateAdded ? `Added ${formatDate(contact.dateAdded)}` : '';
+  document.getElementById('save-indicator').classList.remove('show');
+
+  document.getElementById('contact-panel-overlay').classList.add('open');
+  document.getElementById('contact-panel').classList.add('open');
+}
+
+function closeContactPanel() {
+  document.getElementById('contact-panel-overlay').classList.remove('open');
+  document.getElementById('contact-panel').classList.remove('open');
+  editingContact = null;
+}
+
+async function saveContact() {
+  if (!editingContact) return;
+
+  const updated = {
+    ...editingContact,
+    firstName: document.getElementById('edit-firstName').value.trim(),
+    lastName: document.getElementById('edit-lastName').value.trim(),
+    title: document.getElementById('edit-title').value.trim(),
+    company: document.getElementById('edit-company').value.trim(),
+    phone: normalizePhone(document.getElementById('edit-phone').value.trim()),
+    email: document.getElementById('edit-email').value.trim(),
+    state: document.getElementById('edit-state').value.trim(),
+    country: document.getElementById('edit-country').value.trim(),
+    status: document.getElementById('edit-status').value,
+  };
+
+  try {
+    await api('PUT', '/contact', { rowIndex: editingContact.rowIndex, contact: updated });
+
+    // Update local state
+    const idx = allContacts.findIndex(c => c.id === editingContact.id);
+    if (idx !== -1) allContacts[idx] = updated;
+
+    document.getElementById('panel-contact-name').textContent =
+      `${updated.firstName} ${updated.lastName}`.trim() || updated.company || 'Contact';
+
+    document.getElementById('save-indicator').classList.add('show');
+    setTimeout(() => document.getElementById('save-indicator').classList.remove('show'), 2500);
+
+    renderContacts();
+    updateStats(
+      allContacts.length,
+      allContacts.filter(c => c.status === 'active').length,
+      allContacts.filter(c => c.status === 'optout').length
+    );
+
+    editingContact = updated;
+    toast('Contact saved', 'success');
+  } catch(e) {
+    toast('Error saving contact: ' + e.message, 'error');
+  }
+}
+
+// ─── POLLING ─────────────────────────────────────────────────────────────────
+let pollInterval = null;
+
+function startPolling() {
+  if (pollInterval) clearInterval(pollInterval);
+  pollInterval = setInterval(async () => {
+    await loadContacts();
+  }, 60000); // refresh every 60 seconds
+}
+
+
 function updateCompose() {
   const msg = document.getElementById('message-input').value;
   const len = msg.length;
