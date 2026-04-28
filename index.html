@@ -434,6 +434,7 @@
 
   tr:last-child td { border-bottom: none; }
 
+  td { background: var(--surface); }
   tr:hover td { background: var(--surface2); color: var(--text); }
 
   .badge {
@@ -1034,6 +1035,10 @@
   }
 
   tr.selected-row td { background: rgba(195,0,0,0.03); }
+
+  tr td { background: var(--surface); }
+  tr:hover td { background: var(--surface2); color: var(--text); }
+  tr.selected-row td { background: rgba(195,0,0,0.04) !important; }
 
   .merge-tag-btn {
     font-family: 'DM Mono', monospace;
@@ -1721,11 +1726,13 @@ function renderContacts() {
     return;
   }
 
-  tbody.innerHTML = contacts.map(c => `
-    <tr class="${selectedContactIds.has(c.id) ? 'selected-row' : ''}" onclick="openContactPanel('${c.id}');" style="cursor:pointer;">
+  tbody.innerHTML = contacts.map(c => {
+    const safeId = c.id || `row_${c.rowIndex}`;
+    return `
+    <tr class="${selectedContactIds.has(safeId) ? 'selected-row' : ''}" onclick="openContactPanel('${safeId}');" style="cursor:pointer;">
       <td onclick="event.stopPropagation()">
-        <input type="checkbox" ${selectedContactIds.has(c.id) ? 'checked' : ''}
-          onchange="toggleContactSelection('${c.id}', this.checked)"
+        <input type="checkbox" ${selectedContactIds.has(safeId) ? 'checked' : ''}
+          onchange="toggleContactSelection('${safeId}', this.checked)"
           style="cursor:pointer;accent-color:var(--accent);">
       </td>
       <td style="color:var(--text);font-weight:600;">${c.firstName} ${c.lastName}</td>
@@ -1736,12 +1743,12 @@ function renderContacts() {
       <td><span class="badge badge-${c.status === 'optout' ? 'optout' : 'active'}">${c.status === 'optout' ? 'Opted Out' : 'Active'}</span></td>
       <td onclick="event.stopPropagation()">${c.status === 'active' ? `<button class="btn btn-sm btn-danger" onclick="manualOptOut('${c.phone}')">Opt Out</button>` : ''}</td>
     </tr>
-  `).join('');
+  `}).join('');
 
   // Update select-all checkbox state
   const allVisibleActive = contacts.filter(c => c.status === 'active');
-  const allChecked = allVisibleActive.length > 0 && allVisibleActive.every(c => selectedContactIds.has(c.id));
-  const someChecked = allVisibleActive.some(c => selectedContactIds.has(c.id));
+  const allChecked = allVisibleActive.length > 0 && allVisibleActive.every(c => selectedContactIds.has(c.id || `row_${c.rowIndex}`));
+  const someChecked = allVisibleActive.some(c => selectedContactIds.has(c.id || `row_${c.rowIndex}`));
   const selectAll = document.getElementById('select-all-checkbox');
   if (selectAll) {
     selectAll.checked = allChecked;
@@ -1760,8 +1767,9 @@ function toggleContactSelection(id, checked) {
 function toggleSelectAll(checked) {
   const visibleActive = filteredContacts.filter(c => c.status === 'active');
   visibleActive.forEach(c => {
-    if (checked) selectedContactIds.add(c.id);
-    else selectedContactIds.delete(c.id);
+    const safeId = c.id || `row_${c.rowIndex}`;
+    if (checked) selectedContactIds.add(safeId);
+    else selectedContactIds.delete(safeId);
   });
   renderContacts();
 }
@@ -1785,7 +1793,10 @@ function updateSelectionBar() {
 let pendingSegmentContacts = null;
 
 function messageSelectedContacts() {
-  const selected = allContacts.filter(c => c.status === 'active' && c.phone && selectedContactIds.has(c.id));
+  const selected = allContacts.filter(c => {
+    const safeId = c.id || `row_${c.rowIndex}`;
+    return c.status === 'active' && c.phone && selectedContactIds.has(safeId);
+  });
   if (selected.length === 0) { toast('No active contacts selected', 'error'); return; }
   pendingSegmentContacts = selected;
 
@@ -2148,7 +2159,7 @@ async function manualOptOut(phone) {
 let editingContact = null;
 
 function openContactPanel(contactId) {
-  const contact = allContacts.find(c => c.id === contactId);
+  const contact = allContacts.find(c => (c.id || `row_${c.rowIndex}`) === contactId);
   if (!contact) return;
 
   editingContact = { ...contact };
