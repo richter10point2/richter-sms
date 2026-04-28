@@ -2,9 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💬</text></svg>">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Richter SMS</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💬</text></svg>">
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600&family=Bitter:wght@600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -1013,6 +1013,28 @@
     margin-left: auto;
   }
 
+  /* SELECTION BAR */
+  .selection-bar {
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    background: rgba(195,0,0,0.05);
+    border-bottom: 1px solid rgba(195,0,0,0.15);
+  }
+  .selection-bar.show { display: flex; }
+  .selection-bar-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent);
+    font-family: 'Open Sans', sans-serif;
+  }
+
+  tr.selected-row td { background: rgba(195,0,0,0.03); }
+
   .merge-tag-btn {
     font-family: 'DM Mono', monospace;
     font-size: 11px;
@@ -1189,10 +1211,21 @@
     </div>
 
     <div class="table-wrap">
+      <!-- Selection action bar -->
+      <div class="selection-bar" id="selection-bar">
+        <div class="selection-bar-left">
+          <span id="selection-count-label">0 contacts selected</span>
+          <button class="btn btn-sm" onclick="clearSelection()">Clear Selection</button>
+        </div>
+        <button class="message-segment-btn show" onclick="messageSelectedContacts()">Message selected</button>
+      </div>
+
       <div class="table-toolbar">
-        <input class="search-input" type="text" placeholder="Search name, company, phone..." oninput="filterContacts(this.value)">
+        <div style="display:flex;align-items:center;gap:8px;flex:1;">
+          <input class="search-input" id="search-input" type="text" placeholder="Search name, company, phone..." oninput="filterContacts(this.value)" style="width:100%;max-width:300px;">
+          <button class="btn btn-sm" onclick="resetSearch()" id="reset-search-btn" style="display:none;">Clear</button>
+        </div>
         <div style="display:flex;align-items:center;gap:10px;">
-          <button class="message-segment-btn" id="message-segment-btn" onclick="messageFilteredContacts()">Message these contacts</button>
           <div class="filter-pills">
             <button class="pill active" onclick="setFilter('all', this)">All</button>
             <button class="pill" onclick="setFilter('active', this)">Active</button>
@@ -1204,6 +1237,7 @@
         <table>
           <thead>
             <tr>
+              <th style="width:36px;"><input type="checkbox" id="select-all-checkbox" onchange="toggleSelectAll(this.checked)" style="cursor:pointer;accent-color:var(--accent);"></th>
               <th>Name</th>
               <th>Title</th>
               <th>Company</th>
@@ -1214,7 +1248,7 @@
             </tr>
           </thead>
           <tbody id="contacts-tbody">
-            <tr><td colspan="7"><div class="loading"><div class="spinner"></div>Loading contacts...</div></td></tr>
+            <tr><td colspan="8"><div class="loading"><div class="spinner"></div>Loading contacts...</div></td></tr>
           </tbody>
         </table>
       </div>
@@ -1488,6 +1522,7 @@ let filteredContacts = [];
 let activeFilter = 'all';
 let searchQuery = '';
 let idToken = null;
+let selectedContactIds = new Set();
 
 // ─── WORKER API ───────────────────────────────────────────────────────────────
 async function api(method, path, body) {
@@ -1575,12 +1610,17 @@ function renderContacts() {
   const tbody = document.getElementById('contacts-tbody');
 
   if (contacts.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="7"><div class="empty"><div class="empty-icon">🔍</div><div class="empty-label">No contacts match this filter</div></div></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8"><div class="empty"><div class="empty-icon">🔍</div><div class="empty-label">No contacts match this filter</div></div></td></tr>';
     return;
   }
 
   tbody.innerHTML = contacts.map(c => `
-    <tr onclick="openContactPanel('${c.id}')" style="cursor:pointer;">
+    <tr class="${selectedContactIds.has(c.id) ? 'selected-row' : ''}" onclick="openContactPanel('${c.id}');" style="cursor:pointer;">
+      <td onclick="event.stopPropagation()">
+        <input type="checkbox" ${selectedContactIds.has(c.id) ? 'checked' : ''}
+          onchange="toggleContactSelection('${c.id}', this.checked)"
+          style="cursor:pointer;accent-color:var(--accent);">
+      </td>
       <td style="color:var(--text);font-weight:600;">${c.firstName} ${c.lastName}</td>
       <td>${c.title || '—'}</td>
       <td>${c.company || '—'}</td>
@@ -1590,10 +1630,83 @@ function renderContacts() {
       <td onclick="event.stopPropagation()">${c.status === 'active' ? `<button class="btn btn-sm btn-danger" onclick="manualOptOut('${c.phone}')">Opt Out</button>` : ''}</td>
     </tr>
   `).join('');
+
+  // Update select-all checkbox state
+  const allVisibleActive = contacts.filter(c => c.status === 'active');
+  const allChecked = allVisibleActive.length > 0 && allVisibleActive.every(c => selectedContactIds.has(c.id));
+  const someChecked = allVisibleActive.some(c => selectedContactIds.has(c.id));
+  const selectAll = document.getElementById('select-all-checkbox');
+  if (selectAll) {
+    selectAll.checked = allChecked;
+    selectAll.indeterminate = someChecked && !allChecked;
+  }
+
+  updateSelectionBar();
+}
+
+function toggleContactSelection(id, checked) {
+  if (checked) selectedContactIds.add(id);
+  else selectedContactIds.delete(id);
+  renderContacts();
+}
+
+function toggleSelectAll(checked) {
+  const visibleActive = filteredContacts.filter(c => c.status === 'active');
+  visibleActive.forEach(c => {
+    if (checked) selectedContactIds.add(c.id);
+    else selectedContactIds.delete(c.id);
+  });
+  renderContacts();
+}
+
+function clearSelection() {
+  selectedContactIds = new Set();
+  renderContacts();
+}
+
+function updateSelectionBar() {
+  const bar = document.getElementById('selection-bar');
+  const label = document.getElementById('selection-count-label');
+  if (selectedContactIds.size > 0) {
+    bar.classList.add('show');
+    label.textContent = `${selectedContactIds.size} contact${selectedContactIds.size !== 1 ? 's' : ''} selected`;
+  } else {
+    bar.classList.remove('show');
+  }
+}
+
+function messageSelectedContacts() {
+  const selected = allContacts.filter(c => c.status === 'active' && c.phone && selectedContactIds.has(c.id));
+  if (selected.length === 0) { toast('No active contacts selected', 'error'); return; }
+
+  activeSegment = {
+    name: `${selected.length} hand-picked contact${selected.length !== 1 ? 's' : ''}`,
+    ids: new Set(selected.map(c => c.id))
+  };
+
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('panel-compose').classList.add('active');
+  document.querySelectorAll('.nav-btn')[1].classList.add('active');
+
+  updateSegmentBanner();
+  updateRecipientCount();
+}
+
+function resetSearch() {
+  const input = document.getElementById('search-input');
+  if (input) input.value = '';
+  searchQuery = '';
+  const resetBtn = document.getElementById('reset-search-btn');
+  if (resetBtn) resetBtn.style.display = 'none';
+  renderContacts();
+  updateRecipientCount();
 }
 
 function filterContacts(q) {
   searchQuery = q;
+  const resetBtn = document.getElementById('reset-search-btn');
+  if (resetBtn) resetBtn.style.display = q ? 'block' : 'none';
   renderContacts();
   updateRecipientCount();
 }
@@ -1809,28 +1922,6 @@ function getRecipients() {
   return allContacts.filter(c => c.status === 'active' && c.phone);
 }
 
-function messageFilteredContacts() {
-  const active = filteredContacts.filter(c => c.status === 'active' && c.phone);
-  if (active.length === 0) { toast('No active contacts in current filter', 'error'); return; }
-
-  const query = document.querySelector('.search-input')?.value?.trim() || '';
-  const segmentName = query ? `Search: "${query}"` : 'Filtered contacts';
-
-  activeSegment = {
-    name: segmentName,
-    ids: new Set(active.map(c => c.id))
-  };
-
-  // Switch to compose
-  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('panel-compose').classList.add('active');
-  document.querySelectorAll('.nav-btn')[1].classList.add('active');
-
-  updateSegmentBanner();
-  updateRecipientCount();
-}
-
 function clearSegment() {
   activeSegment = null;
   updateSegmentBanner();
@@ -1941,15 +2032,6 @@ function updateRecipientCount() {
 
   const msg = document.getElementById('message-input').value.trim();
   document.getElementById('send-btn').disabled = !msg || count === 0;
-
-  // Show/hide message segment button on contacts page
-  const btn = document.getElementById('message-segment-btn');
-  if (btn) {
-    const activeFiltered = filteredContacts.filter(c => c.status === 'active' && c.phone);
-    const showBtn = activeFiltered.length > 0 && activeFiltered.length < allContacts.filter(c => c.status === 'active').length;
-    btn.textContent = `Message these ${activeFiltered.length} contacts`;
-    btn.className = 'message-segment-btn' + (showBtn ? ' show' : '');
-  }
 }
 
 function updateFromNumberDisplay() {}
