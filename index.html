@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Richter SMS</title>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600&family=Bitter:wght@600;700;800&display=swap" rel="stylesheet">
 <style>
   /* LOGIN SCREEN */
   .login-screen {
     display: none;
     position: fixed;
     inset: 0;
-    background: #0a0a0a;
+    background: #ffffff;
     z-index: 9999;
     align-items: center;
     justify-content: center;
@@ -20,38 +20,42 @@
   }
   .login-screen.show { display: flex; }
   .login-card {
-    background: #111111;
-    border: 1px solid #333333;
+    background: #ffffff;
+    border: 1px solid #e0e0e0;
     border-radius: 4px;
     padding: 48px;
-    width: 360px;
+    width: 380px;
     text-align: center;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.06);
   }
   .login-logo {
-    font-family: 'Syne', sans-serif;
+    font-family: 'Bitter', serif;
     font-weight: 800;
     font-size: 28px;
-    letter-spacing: -1px;
-    color: #f0f0f0;
+    letter-spacing: -0.5px;
+    color: #1a1a1a;
     margin-bottom: 4px;
   }
-  .login-logo span { color: #e8ff00; }
+  .login-logo span { color: #C30000; }
   .login-sub {
+    font-family: 'Open Sans', sans-serif;
     font-size: 11px;
-    color: #555555;
+    color: #999999;
     text-transform: uppercase;
     letter-spacing: 1.5px;
     margin-bottom: 32px;
   }
   .login-instruction {
-    font-size: 12px;
-    color: #555555;
+    font-family: 'Open Sans', sans-serif;
+    font-size: 13px;
+    color: #666666;
     margin-bottom: 24px;
     line-height: 1.6;
   }
   .login-error {
+    font-family: 'Open Sans', sans-serif;
     font-size: 11px;
-    color: #ff4444;
+    color: #C30000;
     margin-top: 16px;
     display: none;
   }
@@ -61,50 +65,48 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 11px;
-    color: #555555;
-    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: #888888;
+    font-family: 'Open Sans', sans-serif;
   }
   .user-avatar {
     width: 24px;
     height: 24px;
     border-radius: 50%;
-    border: 1px solid #333333;
+    border: 1px solid #e0e0e0;
   }
   .sign-out-btn {
-    font-family: 'DM Mono', monospace;
-    font-size: 10px;
+    font-family: 'Open Sans', sans-serif;
+    font-size: 11px;
     background: none;
     border: none;
-    color: #555555;
+    color: #999999;
     cursor: pointer;
-    text-transform: uppercase;
-    letter-spacing: 1px;
     text-decoration: underline;
   }
-  .sign-out-btn:hover { color: #888888; }
+  .sign-out-btn:hover { color: #C30000; }
 
   :root {
-    --bg: #0a0a0a;
-    --surface: #111111;
-    --surface2: #1a1a1a;
-    --surface3: #222222;
-    --border: #2a2a2a;
-    --border2: #333333;
-    --text: #f0f0f0;
-    --text2: #888888;
-    --text3: #555555;
-    --accent: #e8ff00;
-    --accent2: #b8cc00;
-    --red: #ff4444;
-    --green: #00cc88;
-    --orange: #ff8c00;
+    --bg: #f5f5f5;
+    --surface: #ffffff;
+    --surface2: #f9f9f9;
+    --surface3: #f0f0f0;
+    --border: #e8e8e8;
+    --border2: #d8d8d8;
+    --text: #1a1a1a;
+    --text2: #555555;
+    --text3: #999999;
+    --accent: #C30000;
+    --accent2: #a00000;
+    --red: #C30000;
+    --green: #1a8a5a;
+    --orange: #d97706;
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
   body {
-    font-family: 'DM Mono', monospace;
+    font-family: 'Open Sans', sans-serif;
     background: var(--bg);
     color: var(--text);
     min-height: 100vh;
@@ -116,18 +118,20 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 20px 32px;
-    border-bottom: 1px solid var(--border);
+    padding: 0 32px;
+    height: 60px;
+    border-bottom: 3px solid var(--accent);
     position: sticky;
     top: 0;
-    background: var(--bg);
+    background: var(--surface);
     z-index: 100;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
   }
 
   .logo {
-    font-family: 'Syne', sans-serif;
+    font-family: 'Bitter', serif;
     font-weight: 800;
-    font-size: 18px;
+    font-size: 20px;
     letter-spacing: -0.5px;
     color: var(--text);
   }
@@ -144,6 +148,7 @@
     color: var(--text3);
     text-transform: uppercase;
     letter-spacing: 1px;
+    font-family: 'Open Sans', sans-serif;
   }
 
   .status-dot {
@@ -163,29 +168,29 @@
   .nav {
     display: flex;
     gap: 2px;
-    padding: 16px 32px;
+    padding: 0 32px;
     border-bottom: 1px solid var(--border);
+    background: var(--surface);
   }
 
   .nav-btn {
-    font-family: 'DM Mono', monospace;
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 1.5px;
-    padding: 8px 16px;
-    border: 1px solid transparent;
+    font-family: 'Open Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 14px 18px;
+    border: none;
+    border-bottom: 3px solid transparent;
     background: none;
     color: var(--text3);
     cursor: pointer;
-    border-radius: 2px;
     transition: all 0.15s;
+    margin-bottom: -1px;
   }
 
-  .nav-btn:hover { color: var(--text2); border-color: var(--border2); }
+  .nav-btn:hover { color: var(--text2); }
   .nav-btn.active {
     color: var(--accent);
-    border-color: var(--accent);
-    background: rgba(232, 255, 0, 0.05);
+    border-bottom-color: var(--accent);
   }
 
   /* MAIN */
@@ -206,17 +211,17 @@
   }
 
   .section-title {
-    font-family: 'Syne', sans-serif;
+    font-family: 'Bitter', serif;
     font-weight: 700;
     font-size: 22px;
-    letter-spacing: -0.5px;
+    letter-spacing: -0.3px;
+    color: var(--text);
   }
 
   .section-sub {
-    font-size: 11px;
+    font-family: 'Open Sans', sans-serif;
+    font-size: 12px;
     color: var(--text3);
-    text-transform: uppercase;
-    letter-spacing: 1px;
     margin-top: 4px;
   }
 
@@ -238,7 +243,7 @@
   }
 
   .stat-val {
-    font-family: 'Syne', sans-serif;
+    font-family: 'Bitter', serif;
     font-weight: 700;
     font-size: 28px;
     color: var(--text);
@@ -259,36 +264,34 @@
 
   /* BUTTONS */
   .btn {
-    font-family: 'DM Mono', monospace;
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 1.5px;
-    padding: 10px 20px;
+    font-family: 'Open Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 9px 20px;
     border: 1px solid var(--border2);
-    background: var(--surface2);
+    background: var(--surface);
     color: var(--text2);
     cursor: pointer;
-    border-radius: 2px;
+    border-radius: 3px;
     transition: all 0.15s;
     white-space: nowrap;
   }
 
-  .btn:hover { color: var(--text); border-color: var(--text3); }
+  .btn:hover { color: var(--text); border-color: var(--text3); background: var(--surface2); }
 
   .btn-primary {
     background: var(--accent);
-    color: #000;
+    color: #ffffff;
     border-color: var(--accent);
-    font-weight: 500;
   }
 
-  .btn-primary:hover { background: var(--accent2); border-color: var(--accent2); color: #000; }
+  .btn-primary:hover { background: var(--accent2); border-color: var(--accent2); color: #ffffff; }
   .btn-primary:disabled { background: var(--surface3); color: var(--text3); border-color: var(--border); cursor: not-allowed; }
 
   .btn-danger { border-color: var(--red); color: var(--red); }
-  .btn-danger:hover { background: rgba(255,68,68,0.1); }
+  .btn-danger:hover { background: rgba(195,0,0,0.05); }
 
-  .btn-sm { padding: 6px 12px; font-size: 10px; }
+  .btn-sm { padding: 5px 12px; font-size: 11px; }
 
   /* UPLOAD ZONE */
   .upload-zone {
@@ -302,7 +305,7 @@
     margin-bottom: 24px;
   }
 
-  .upload-zone:hover, .upload-zone.drag { border-color: var(--accent); background: rgba(232,255,0,0.03); }
+  .upload-zone:hover, .upload-zone.drag { border-color: var(--accent); background: rgba(195,0,0,0.02); }
 
   .upload-icon {
     font-size: 32px;
@@ -311,15 +314,16 @@
   }
 
   .upload-label {
-    font-family: 'Syne', sans-serif;
-    font-size: 14px;
-    font-weight: 600;
+    font-family: 'Bitter', serif;
+    font-size: 15px;
+    font-weight: 700;
     color: var(--text2);
     margin-bottom: 6px;
   }
 
   .upload-sub {
-    font-size: 11px;
+    font-family: 'Open Sans', sans-serif;
+    font-size: 12px;
     color: var(--text3);
   }
 
@@ -341,13 +345,13 @@
   }
 
   .search-input {
-    font-family: 'DM Mono', monospace;
-    font-size: 12px;
-    background: var(--surface2);
+    font-family: 'Open Sans', sans-serif;
+    font-size: 13px;
+    background: var(--surface);
     border: 1px solid var(--border2);
     color: var(--text);
     padding: 8px 12px;
-    border-radius: 2px;
+    border-radius: 3px;
     width: 240px;
     outline: none;
     transition: border-color 0.15s;
@@ -395,8 +399,8 @@
     font-weight: 500;
   }
 
-  .badge-active { background: rgba(0,204,136,0.15); color: var(--green); border: 1px solid rgba(0,204,136,0.3); }
-  .badge-optout { background: rgba(255,68,68,0.1); color: var(--red); border: 1px solid rgba(255,68,68,0.2); }
+  .badge-active { background: rgba(26,138,90,0.1); color: var(--green); border: 1px solid rgba(26,138,90,0.25); }
+  .badge-optout { background: rgba(195,0,0,0.08); color: var(--red); border: 1px solid rgba(195,0,0,0.2); }
 
   /* COMPOSE */
   .compose-grid {
@@ -414,22 +418,24 @@
   }
 
   .compose-label {
-    font-size: 10px;
+    font-family: 'Open Sans', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 1.5px;
+    letter-spacing: 1px;
     color: var(--text3);
     margin-bottom: 8px;
     display: block;
   }
 
   .compose-textarea {
-    font-family: 'DM Mono', monospace;
-    font-size: 13px;
-    background: var(--surface2);
+    font-family: 'Open Sans', sans-serif;
+    font-size: 14px;
+    background: var(--surface);
     border: 1px solid var(--border2);
     color: var(--text);
     padding: 16px;
-    border-radius: 2px;
+    border-radius: 3px;
     width: 100%;
     height: 160px;
     resize: vertical;
@@ -525,13 +531,13 @@
 
   /* SEGMENT SELECT */
   .segment-select {
-    font-family: 'DM Mono', monospace;
-    font-size: 12px;
-    background: var(--surface2);
+    font-family: 'Open Sans', sans-serif;
+    font-size: 13px;
+    background: var(--surface);
     border: 1px solid var(--border2);
     color: var(--text);
     padding: 8px 12px;
-    border-radius: 2px;
+    border-radius: 3px;
     outline: none;
     width: 100%;
     cursor: pointer;
@@ -562,10 +568,11 @@
   }
 
   .modal-title {
-    font-family: 'Syne', sans-serif;
+    font-family: 'Bitter', serif;
     font-weight: 700;
     font-size: 18px;
     margin-bottom: 8px;
+    color: var(--text);
   }
 
   .modal-sub {
@@ -632,7 +639,7 @@
   }
 
   .history-stat-val {
-    font-family: 'Syne', sans-serif;
+    font-family: 'Bitter', serif;
     font-weight: 700;
     font-size: 18px;
   }
@@ -678,15 +685,16 @@
   }
 
   .toast {
-    font-family: 'DM Mono', monospace;
-    font-size: 12px;
+    font-family: 'Open Sans', sans-serif;
+    font-size: 13px;
     padding: 12px 20px;
-    border-radius: 2px;
+    border-radius: 3px;
     border-left: 3px solid var(--accent);
-    background: var(--surface2);
+    background: var(--surface);
     color: var(--text);
     animation: slideIn 0.2s ease;
     max-width: 320px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.1);
   }
 
   .toast.error { border-left-color: var(--red); }
@@ -743,25 +751,24 @@
   }
 
   .pill {
-    font-size: 10px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    padding: 4px 10px;
+    font-size: 11px;
+    font-family: 'Open Sans', sans-serif;
+    font-weight: 600;
+    padding: 4px 12px;
     border: 1px solid var(--border2);
     border-radius: 20px;
     cursor: pointer;
     color: var(--text3);
     transition: all 0.15s;
     background: none;
-    font-family: 'DM Mono', monospace;
   }
 
-  .pill:hover { color: var(--text2); }
-  .pill.active { border-color: var(--accent); color: var(--accent); background: rgba(232,255,0,0.05); }
+  .pill:hover { color: var(--text2); border-color: var(--text3); }
+  .pill.active { border-color: var(--accent); color: var(--accent); background: rgba(195,0,0,0.05); }
 
   /* SCROLLBAR */
   ::-webkit-scrollbar { width: 4px; height: 4px; }
-  ::-webkit-scrollbar-track { background: var(--surface); }
+  ::-webkit-scrollbar-track { background: var(--surface2); }
   ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
   ::-webkit-scrollbar-thumb:hover { background: var(--text3); }
 </style>
