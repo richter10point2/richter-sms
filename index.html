@@ -917,6 +917,55 @@
   }
   .save-indicator.show { display: flex; }
 
+  .test-contact-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    margin-bottom: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+    background: var(--surface2);
+  }
+
+  .test-contact-item:hover { border-color: var(--accent); background: rgba(195,0,0,0.02); }
+  .test-contact-item.selected { border-color: var(--accent); background: rgba(195,0,0,0.05); }
+
+  .test-contact-check {
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--border2);
+    border-radius: 3px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    color: var(--accent);
+    transition: all 0.15s;
+  }
+
+  .test-contact-item.selected .test-contact-check {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+  }
+
+  .test-contact-name {
+    font-family: 'Open Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .test-contact-phone {
+    font-size: 12px;
+    color: var(--text3);
+    margin-left: auto;
+  }
+
   /* SCROLLBAR */
   ::-webkit-scrollbar { width: 4px; height: 4px; }
   ::-webkit-scrollbar-track { background: var(--surface2); }
@@ -1148,6 +1197,7 @@
           </div>
 
           <div style="margin-top:20px;display:flex;gap:8px;">
+            <button class="btn" id="test-btn" onclick="openTestModal()" style="flex:0 0 auto;">Send Test</button>
             <button class="btn btn-primary" id="send-btn" onclick="confirmSend()" style="flex:1" disabled>Send Message</button>
           </div>
 
@@ -1184,6 +1234,22 @@
     </div>
   </div>
 
+</div>
+
+<!-- TEST SEND MODAL -->
+<div class="modal-overlay" id="test-modal">
+  <div class="modal">
+    <div class="modal-title">Send Test</div>
+    <div class="modal-sub">Select which test contacts to send to. These numbers are managed in the <strong>test_contacts</strong> sheet.</div>
+    <div id="test-contacts-list" style="margin-bottom:20px;">
+      <div class="loading"><div class="spinner"></div>Loading...</div>
+    </div>
+    <div class="modal-preview" id="test-modal-preview" style="margin-bottom:16px;"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeTestModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="executeTestSend()">Send Test</button>
+    </div>
+  </div>
 </div>
 
 <!-- CONFIRM MODAL -->
@@ -1655,7 +1721,87 @@ function ensureStopLanguage(msg) {
   if (!msg) return msg;
   const lower = msg.toLowerCase();
   if (lower.includes('stop')) return msg;
-  return msg + ' Reply STOP to opt out.';
+  return msg + '\n\nReply STOP to opt out.';
+}
+
+// ─── TEST SEND ────────────────────────────────────────────────────────────────
+let testContacts = [];
+let selectedTestContacts = new Set();
+
+async function openTestModal() {
+  const msg = document.getElementById('message-input').value.trim();
+  if (!msg) { toast('Write a message first', 'error'); return; }
+
+  document.getElementById('test-modal-preview').textContent = ensureStopLanguage(msg);
+  document.getElementById('test-modal').classList.add('open');
+  selectedTestContacts = new Set();
+
+  const listEl = document.getElementById('test-contacts-list');
+  listEl.innerHTML = '<div class="loading"><div class="spinner"></div>Loading...</div>';
+
+  try {
+    const data = await api('GET', '/test-contacts');
+    testContacts = data.contacts || [];
+
+    if (testContacts.length === 0) {
+      listEl.innerHTML = '<div style="font-size:13px;color:var(--text3);padding:8px 0;">No test contacts found. Add them to the test_contacts sheet.</div>';
+      return;
+    }
+
+    renderTestContacts();
+  } catch(e) {
+    listEl.innerHTML = '<div style="font-size:13px;color:var(--red);">Error loading test contacts</div>';
+  }
+}
+
+function renderTestContacts() {
+  const listEl = document.getElementById('test-contacts-list');
+  listEl.innerHTML = testContacts.map((c, i) => `
+    <div class="test-contact-item ${selectedTestContacts.has(i) ? 'selected' : ''}" onclick="toggleTestContact(${i})">
+      <div class="test-contact-check">${selectedTestContacts.has(i) ? '✓' : ''}</div>
+      <div class="test-contact-name">${escHtml(c.name)}</div>
+      <div class="test-contact-phone">${formatPhone(c.phone)}</div>
+    </div>
+  `).join('');
+}
+
+function toggleTestContact(index) {
+  if (selectedTestContacts.has(index)) {
+    selectedTestContacts.delete(index);
+  } else {
+    selectedTestContacts.add(index);
+  }
+  renderTestContacts();
+}
+
+function closeTestModal() {
+  document.getElementById('test-modal').classList.remove('open');
+  selectedTestContacts = new Set();
+}
+
+async function executeTestSend() {
+  if (selectedTestContacts.size === 0) {
+    toast('Select at least one test contact', 'error');
+    return;
+  }
+
+  const msg = ensureStopLanguage(document.getElementById('message-input').value.trim());
+  const recipients = [...selectedTestContacts].map(i => testContacts[i]);
+
+  closeTestModal();
+
+  let sent = 0, failed = 0;
+  for (const contact of recipients) {
+    try {
+      const result = await api('POST', '/send', { to: normalizePhone(contact.phone), message: msg });
+      if (result.success) sent++;
+      else failed++;
+    } catch(e) {
+      failed++;
+    }
+  }
+
+  toast(`Test sent — ${sent} delivered, ${failed} failed`, sent > 0 ? 'success' : 'error');
 }
 
 // ─── SEND ─────────────────────────────────────────────────────────────────────
