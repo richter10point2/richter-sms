@@ -1197,6 +1197,7 @@
       </div>
       <div style="display:flex;gap:8px;">
         <button class="btn" onclick="openUploadModal()">Upload CSV</button>
+        <button class="btn" onclick="cleanPhoneNumbers()" id="clean-btn">Clean Numbers</button>
         <button class="btn btn-primary" onclick="loadContacts()">Refresh</button>
       </div>
     </div>
@@ -1821,7 +1822,7 @@ function confirmSegmentName() {
 
   activeSegment = {
     name,
-    ids: new Set(pendingSegmentContacts.map(c => c.id))
+    ids: new Set(pendingSegmentContacts.map(c => c.id || `row_${c.rowIndex}`))
   };
 
   closeSegmentNameModal();
@@ -2025,7 +2026,46 @@ async function loadReplies() {
   }
 }
 
-// ─── UPLOAD MODAL ─────────────────────────────────────────────────────────────
+// ─── PHONE NUMBER CLEANER ─────────────────────────────────────────────────────
+async function cleanPhoneNumbers() {
+  const dirty = allContacts.filter(c => {
+    if (!c.phone) return false;
+    const normalized = normalizePhone(c.phone);
+    return normalized !== c.phone;
+  });
+
+  if (dirty.length === 0) {
+    toast('All phone numbers are already formatted correctly', 'success');
+    return;
+  }
+
+  if (!confirm(`Found ${dirty.length} phone numbers that need reformatting to E.164 format (+1XXXXXXXXXX). Fix them now?`)) return;
+
+  const btn = document.getElementById('clean-btn');
+  btn.disabled = true;
+  btn.textContent = 'Cleaning...';
+
+  let fixed = 0;
+  for (const contact of dirty) {
+    const normalized = normalizePhone(contact.phone);
+    const updated = { ...contact, phone: normalized };
+    try {
+      await api('PUT', '/contact', { rowIndex: contact.rowIndex, contact: updated });
+      const idx = allContacts.findIndex(c => (c.id || `row_${c.rowIndex}`) === (contact.id || `row_${contact.rowIndex}`));
+      if (idx !== -1) allContacts[idx].phone = normalized;
+      fixed++;
+    } catch(e) {
+      console.error('Failed to fix:', contact.phone, e);
+    }
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Clean Numbers';
+  toast(`Fixed ${fixed} phone numbers`, 'success');
+  await loadContacts();
+}
+
+
 function openUploadModal() {
   document.getElementById('upload-modal-overlay').classList.add('open');
 }
@@ -2251,7 +2291,10 @@ let activeSegment = null; // null = all contacts, otherwise { name, ids: Set }
 
 function getRecipients() {
   if (activeSegment) {
-    return allContacts.filter(c => c.status === 'active' && c.phone && activeSegment.ids.has(c.id));
+    return allContacts.filter(c => {
+      const safeId = c.id || `row_${c.rowIndex}`;
+      return c.status === 'active' && c.phone && activeSegment.ids.has(safeId);
+    });
   }
   return allContacts.filter(c => c.status === 'active' && c.phone);
 }
@@ -2260,9 +2303,7 @@ function clearSegment() {
   activeSegment = null;
   updateSegmentBanner();
   updateRecipientCount();
-}
-
-function updateSegmentBanner() {
+}function updateSegmentBanner() {
   const banner = document.getElementById('segment-banner');
   const bannerText = document.getElementById('segment-banner-text');
   if (activeSegment) {
